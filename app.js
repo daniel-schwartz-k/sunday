@@ -116,6 +116,17 @@ class TaskManager {
             document.getElementById('task-url').addEventListener('input', () => {
                 document.querySelector('.save-task').disabled = false;
             });
+            document.getElementById('task-url').addEventListener('pointerdown', async () => {
+                const el = document.getElementById('task-url');
+                if (el.value) return;
+                try {
+                    const text = await navigator.clipboard.readText();
+                    if (text && /^https?:\/\/.+/.test(text.trim()) && !el.value) {
+                        el.value = text.trim();
+                        document.querySelector('.save-task').disabled = false;
+                    }
+                } catch {}
+            });
             this.taskQuill.on('text-change', (delta, oldDelta, source) => {
                 if (source === 'user') document.querySelector('.save-task').disabled = false;
             });
@@ -126,6 +137,17 @@ class TaskManager {
             });
             document.getElementById('subtask-url').addEventListener('input', () => {
                 document.querySelector('.save-subtask').disabled = false;
+            });
+            document.getElementById('subtask-url').addEventListener('pointerdown', async () => {
+                const el = document.getElementById('subtask-url');
+                if (el.value) return;
+                try {
+                    const text = await navigator.clipboard.readText();
+                    if (text && /^https?:\/\/.+/.test(text.trim()) && !el.value) {
+                        el.value = text.trim();
+                        document.querySelector('.save-subtask').disabled = false;
+                    }
+                } catch {}
             });
             this.subtaskQuill.on('text-change', (delta, oldDelta, source) => {
                 if (source === 'user') document.querySelector('.save-subtask').disabled = false;
