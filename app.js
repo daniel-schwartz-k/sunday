@@ -50,6 +50,7 @@ class TaskManager {
             this.currentlyEditingParentTask = null;
             this.isDragging = false;
             this._panelPendingTags = [];
+            this._faviconCache = new Map();
             this.initializeQuillEditors();
             this.loadFromDb();
             this.setupEventListeners();
@@ -636,6 +637,8 @@ class TaskManager {
                     });
                 }, 100);
             });
+
+            this.setupUrlTooltip();
         }
 
         updateTaskOrder(columnId) {
@@ -817,7 +820,7 @@ class TaskManager {
                     const subtasksBadge = subtask.subtasks.length ? `<span class="subtask-badge">${subtask.subtasks.length}</span>` : '';
                     
                     // Add URL link button if URL exists
-                    const urlButton = subtask.url ? `<a href="${subtask.url}" class="task-url-link" title="Open URL" target="_blank">↗</a>` : '';
+                    const urlButton = subtask.url ? `<a data-url="${subtask.url}" class="task-url-link">↗</a>` : '';
                     
                     subtaskElement.innerHTML = `
                         <input type="checkbox" class="task-checkbox" data-id="${subtask.id}">
@@ -950,7 +953,7 @@ class TaskManager {
             const titleAttr = task.description ? ` title="${this.sanitizeDescription(task.description)}"` : '';
 
             // Add URL link button if URL exists
-            const urlButton = task.url ? `<a href="${task.url}" tabIndex=0 class="task-url-link" title="↗️ ${task.url}" target="_blank">↗</a>` : '';
+            const urlButton = task.url ? `<a data-url="${task.url}" tabIndex=0 class="task-url-link">↗</a>` : '';
 
             // Build tag pills HTML
             const tagsHtml = (task.tags || []).map(key => {
@@ -1199,12 +1202,10 @@ class TaskManager {
                     if (!urlButton) {
                         urlButton = document.createElement('a');
                         urlButton.className = 'task-url-link';
-                        urlButton.title = `↗️${task.url}`;
-                        urlButton.target = '_blank';
                         urlButton.textContent = '↗';
                         taskElement.querySelector('.tag-button').after(urlButton);
                     }
-                    urlButton.href = task.url;
+                    urlButton.dataset.url = task.url;
                 } else if (urlButton) {
                     urlButton.remove();
                 }
@@ -1628,7 +1629,7 @@ class TaskManager {
                     const subtasksBadge = subtask.subtasks.length ? `<span class="subtask-badge">${subtask.subtasks.length}</span>` : '';
                     
                     // Add URL link button if URL exists
-                    const urlButton = subtask.url ? `<a href="${subtask.url}" class="task-url-link" title="Open URL" target="_blank">↗</a>` : '';
+                    const urlButton = subtask.url ? `<a data-url="${subtask.url}" class="task-url-link">↗</a>` : '';
                     
                     subtaskElement.innerHTML = `
                         <input type="checkbox" class="task-checkbox" data-id="${subtask.id}">
@@ -1957,6 +1958,70 @@ class TaskManager {
                     .replace(/\n+/g, '\n')             // Replace multiple linebreaks with single
                     .trim();
             return text ? `${text.substring(0, 50)}...` : ''; // Limit to 50 characters for tooltip
+        }
+
+        setupUrlTooltip() {
+            document.addEventListener('click', (e) => {
+                const btn = e.target.closest('.task-url-link');
+                if (btn?.dataset.url) window.open(btn.dataset.url, '_blank');
+            });
+            document.addEventListener('auxclick', (e) => {
+                if (e.button !== 1) return;
+                const btn = e.target.closest('.task-url-link');
+                if (btn?.dataset.url) window.open(btn.dataset.url, '_blank');
+            });
+
+            if (window.matchMedia('(hover: none) and (pointer: coarse)').matches) return;
+            let activeBtn = null;
+            let hoverTimer = null;
+            document.addEventListener('mouseover', (e) => {
+                const btn = e.target.closest('.task-url-link');
+                if (btn === activeBtn) return;
+                clearTimeout(hoverTimer);
+                this.hideUrlTooltip();
+                activeBtn = btn;
+                if (!btn) return;
+                hoverTimer = setTimeout(() => this.showUrlTooltip(btn, btn.dataset.url), 350);
+            });
+        }
+
+        showUrlTooltip(anchorEl, url) {
+            this.hideUrlTooltip();
+            let hostname = url;
+            try { hostname = new URL(url).hostname; } catch {}
+
+            if (!this._faviconCache.has(hostname)) {
+                const img = new Image();
+                img.src = `https://www.google.com/s2/favicons?domain=${encodeURIComponent(hostname)}&sz=64`;
+                this._faviconCache.set(hostname, img);
+            }
+            const faviconUrl = this._faviconCache.get(hostname).src;
+
+            const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            const tooltip = document.createElement('div');
+            tooltip.id = 'url-preview-tooltip';
+            tooltip.className = 'url-preview-tooltip';
+            tooltip.innerHTML = `
+                <img class="url-preview-favicon" src="${faviconUrl}" alt="" onerror="this.style.display='none'">
+                <div class="url-preview-text">
+                    <span class="url-preview-host">${esc(hostname)}</span>
+                    <span class="url-preview-url">${esc(url)}</span>
+                </div>
+            `;
+            document.body.appendChild(tooltip);
+
+            const rect = anchorEl.getBoundingClientRect();
+            const tt = tooltip.getBoundingClientRect();
+            let top = rect.top - tt.height - 8;
+            let left = rect.left + rect.width / 2 - tt.width / 2;
+            if (top < 8) top = rect.bottom + 8;
+            left = Math.max(8, Math.min(left, window.innerWidth - tt.width - 8));
+            tooltip.style.top = `${top}px`;
+            tooltip.style.left = `${left}px`;
+        }
+
+        hideUrlTooltip() {
+            document.getElementById('url-preview-tooltip')?.remove();
         }
 
     }

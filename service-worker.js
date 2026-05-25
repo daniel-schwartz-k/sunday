@@ -1,5 +1,5 @@
 // service-worker.js
-const CACHE_NAME = 'sunday-app-cache-v4';
+const CACHE_NAME = 'sunday-app-cache-v5';
 const ASSETS_TO_CACHE = [
   '/sunday/',
   '/sunday/index.html',
@@ -22,7 +22,9 @@ const ASSETS_TO_CACHE = [
 
 self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS_TO_CACHE))
+    caches.open(CACHE_NAME).then(cache =>
+      Promise.all(ASSETS_TO_CACHE.map(url => cache.add(url).catch(() => {})))
+    )
   );
   self.skipWaiting();
 });
