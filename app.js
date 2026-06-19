@@ -332,6 +332,63 @@ class TaskManager {
                     const subtaskPanel = document.getElementById('subtask-panel');
                     if (panel.classList.contains('active') || subtaskPanel.classList.contains('active')) return;
 
+                    // Ctrl+Arrow: move (reorder) the focused task
+                    if ((e.ctrlKey || e.metaKey) && isTask) {
+                        e.preventDefault();
+                        const columnOrder = ['on-it', 'next-up', 'back-log'];
+                        const column = focused.closest('.task-column');
+                        if (!column) return;
+                        const columnId = column.id;
+                        const taskId = focused.dataset.taskId;
+                        const taskListEl = column.querySelector('.task-list');
+                        const tasks = [...taskListEl.querySelectorAll('.task-item')];
+                        const index = tasks.indexOf(focused);
+
+                        if (e.key === 'ArrowUp' && index > 0) {
+                            taskListEl.insertBefore(focused, tasks[index - 1]);
+                            const arr = this.lists[columnId].tasks;
+                            [arr[index - 1], arr[index]] = [arr[index], arr[index - 1]];
+                            this.saveToDb();
+                            focused.focus();
+
+                        } else if (e.key === 'ArrowDown' && index < tasks.length - 1) {
+                            taskListEl.insertBefore(tasks[index + 1], focused);
+                            const arr = this.lists[columnId].tasks;
+                            [arr[index], arr[index + 1]] = [arr[index + 1], arr[index]];
+                            this.saveToDb();
+                            focused.focus();
+
+                        } else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+                            const colIdx = columnOrder.indexOf(columnId);
+                            const dir = e.key === 'ArrowLeft' ? -1 : 1;
+                            const targetColIdx = colIdx + dir;
+                            if (targetColIdx < 0 || targetColIdx >= columnOrder.length) return;
+
+                            const targetColumnId = columnOrder[targetColIdx];
+                            const task = this.lists[columnId].getTask(taskId);
+                            if (!task) return;
+
+                            this.lists[columnId].removeTask(taskId);
+
+                            const targetArr = this.lists[targetColumnId].tasks;
+                            const insertIdx = Math.min(index, targetArr.length);
+                            targetArr.splice(insertIdx, 0, task);
+
+                            const targetListEl = document.querySelector(`#${targetColumnId} .task-list`);
+                            const targetTasks = [...targetListEl.querySelectorAll('.task-item')];
+                            if (targetTasks[insertIdx]) {
+                                targetListEl.insertBefore(focused, targetTasks[insertIdx]);
+                            } else {
+                                targetListEl.appendChild(focused);
+                            }
+                            focused.dataset.sourceColumn = targetColumnId;
+
+                            this.saveToDb();
+                            focused.focus();
+                        }
+                        return;
+                    }
+
                     const columnOrder = ['on-it', 'next-up', 'back-log'];
                     const bottomBtns = [...document.querySelectorAll('.bottom-actions > button')];
 
