@@ -173,13 +173,14 @@ class TaskManager {
 
             // Deleted tasks panel events
             document.getElementById('show-deleted-tasks').addEventListener('click', () => this.showDeletedTasksPanel());
+            document.querySelector('.deleted-tasks-search').addEventListener('input', () => this.showDeletedTasksPanel());
             document.getElementById('sync-btn').addEventListener('click', () => this.syncWithAirtable());
             document.getElementById('loading-dismiss-btn').addEventListener('click', () => this.hideLoading());
             if (localStorage.getItem('persistMode') !== 'AirTable') {
                 document.getElementById('sync-btn').disabled = true;
             }
             document.querySelector('#deleted-tasks-panel .close-panel').addEventListener('click', () => {
-                document.getElementById('deleted-tasks-panel').classList.remove('active');
+                this.closeDeletedTasksPanel();
             });
 
             // Clear all deleted tasks
@@ -323,6 +324,7 @@ class TaskManager {
 
                 // Arrow key navigation between tasks and bottom actions
                 if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+                    document.body.classList.add('keyboard-navigating');
                     const focused = document.activeElement;
                     const isTask = focused && focused.classList.contains('task-item');
                     const isAddBtn = focused && focused.classList.contains('add-task-btn');
@@ -331,6 +333,63 @@ class TaskManager {
                     const panel = document.getElementById('task-panel');
                     const subtaskPanel = document.getElementById('subtask-panel');
                     if (panel.classList.contains('active') || subtaskPanel.classList.contains('active')) return;
+
+                    // Ctrl+Arrow: move (reorder) the focused task
+                    if ((e.ctrlKey || e.metaKey) && isTask) {
+                        e.preventDefault();
+                        const columnOrder = ['on-it', 'next-up', 'back-log'];
+                        const column = focused.closest('.task-column');
+                        if (!column) return;
+                        const columnId = column.id;
+                        const taskId = focused.dataset.taskId;
+                        const taskListEl = column.querySelector('.task-list');
+                        const tasks = [...taskListEl.querySelectorAll('.task-item')];
+                        const index = tasks.indexOf(focused);
+
+                        if (e.key === 'ArrowUp' && index > 0) {
+                            taskListEl.insertBefore(focused, tasks[index - 1]);
+                            const arr = this.lists[columnId].tasks;
+                            [arr[index - 1], arr[index]] = [arr[index], arr[index - 1]];
+                            this.saveToDb();
+                            focused.focus();
+
+                        } else if (e.key === 'ArrowDown' && index < tasks.length - 1) {
+                            taskListEl.insertBefore(tasks[index + 1], focused);
+                            const arr = this.lists[columnId].tasks;
+                            [arr[index], arr[index + 1]] = [arr[index + 1], arr[index]];
+                            this.saveToDb();
+                            focused.focus();
+
+                        } else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+                            const colIdx = columnOrder.indexOf(columnId);
+                            const dir = e.key === 'ArrowLeft' ? -1 : 1;
+                            const targetColIdx = colIdx + dir;
+                            if (targetColIdx < 0 || targetColIdx >= columnOrder.length) return;
+
+                            const targetColumnId = columnOrder[targetColIdx];
+                            const task = this.lists[columnId].getTask(taskId);
+                            if (!task) return;
+
+                            this.lists[columnId].removeTask(taskId);
+
+                            const targetArr = this.lists[targetColumnId].tasks;
+                            const insertIdx = Math.min(index, targetArr.length);
+                            targetArr.splice(insertIdx, 0, task);
+
+                            const targetListEl = document.querySelector(`#${targetColumnId} .task-list`);
+                            const targetTasks = [...targetListEl.querySelectorAll('.task-item')];
+                            if (targetTasks[insertIdx]) {
+                                targetListEl.insertBefore(focused, targetTasks[insertIdx]);
+                            } else {
+                                targetListEl.appendChild(focused);
+                            }
+                            focused.dataset.sourceColumn = targetColumnId;
+
+                            this.saveToDb();
+                            focused.focus();
+                        }
+                        return;
+                    }
 
                     const columnOrder = ['on-it', 'next-up', 'back-log'];
                     const bottomBtns = [...document.querySelectorAll('.bottom-actions > button')];
@@ -412,6 +471,12 @@ class TaskManager {
                     } else {
                         this.syncWithAirtable();
                     }
+                }
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (e.movementX !== 0 || e.movementY !== 0) {
+                    document.body.classList.remove('keyboard-navigating');
                 }
             });
 
@@ -1024,6 +1089,13 @@ class TaskManager {
                 this.openTaskPanel(task);
             });
 
+            taskElement.addEventListener('mouseenter', () => {
+                const panelOpen = document.querySelector('.panel.active');
+                if (!panelOpen && !document.body.classList.contains('keyboard-navigating')) {
+                    taskElement.focus({ preventScroll: true });
+                }
+            });
+
             // Add keyboard event listener for opening task panel
             taskElement.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter' && !e.target.classList.contains('task-checkbox')) {
@@ -1092,10 +1164,16 @@ class TaskManager {
 
         showDeletedTasksPanel() {
             const panel = document.getElementById('deleted-tasks-panel');
+            const wasActive = panel.classList.contains('active');
             const taskList = panel.querySelector('.deleted-task-list');
             taskList.innerHTML = '';
 
-            this.deletedTasks.forEach(task => {
+            const query = (panel.querySelector('.deleted-tasks-search').value || '').toLowerCase();
+            const visibleTasks = query
+                ? this.deletedTasks.filter(t => t.name.toLowerCase().includes(query))
+                : this.deletedTasks;
+
+            visibleTasks.forEach(task => {
                 const taskElement = document.createElement('div');
                 taskElement.className = 'deleted-task-item';
                 taskElement.innerHTML = `
@@ -1111,6 +1189,9 @@ class TaskManager {
             });
 
             panel.classList.add('active');
+            if (!wasActive) {
+                setTimeout(() => panel.querySelector('.deleted-tasks-search').focus(), 50);
+            }
         }
 
         restoreTask(task) {
@@ -1515,6 +1596,7 @@ class TaskManager {
 
         closeDeletedTasksPanel() {
             const panel = document.getElementById('deleted-tasks-panel');
+            panel.querySelector('.deleted-tasks-search').value = '';
             panel.classList.remove('active');
             panel.classList.remove('no-click');
             // Reset dragging state

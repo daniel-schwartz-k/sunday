@@ -213,6 +213,11 @@ body {
     border-color: var(--color-accent);
 }
 
+body.keyboard-navigating .task-item:hover:not(:focus) {
+    background: var(--color-bg-input);
+    border-color: var(--color-border-secondary);
+}
+
 .task-item:focus {
     outline: none;
 }
@@ -867,6 +872,38 @@ body {
     color: white;
     transform: translateY(-1px);
     box-shadow: 0 2px 4px rgba(255, 107, 43, 0.2);
+}
+
+.deleted-tasks-panel .panel-content {
+    height: 90vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.deleted-tasks-panel .panel-content .deleted-task-list {
+    flex: 1;
+    max-height: unset;
+}
+
+.deleted-tasks-search {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 7px 10px;
+    margin: 10px 0 4px;
+    background: var(--color-secondary-bg);
+    color: var(--color-text);
+    border: 1px solid #444;
+    border-radius: 6px;
+    font-size: 14px;
+    outline: none;
+}
+
+.deleted-tasks-search:focus {
+    border-color: var(--color-primary);
+}
+
+.deleted-tasks-search::placeholder {
+    color: #777;
 }
 
 .deleted-task-list {
