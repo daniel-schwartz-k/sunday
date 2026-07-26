@@ -643,6 +643,19 @@ body.keyboard-navigating .task-item:hover:not(:focus) {
     box-shadow: 0 2px 8px rgba(255, 107, 43, 0.3);
 }
 
+.sync-btn:disabled {
+    color: var(--color-text-muted, #666);
+    border-color: var(--color-text-muted, #666);
+    cursor: not-allowed;
+    opacity: 0.4;
+}
+
+.sync-btn:disabled:hover {
+    background-color: transparent;
+    color: var(--color-text-muted, #666);
+    box-shadow: none;
+}
+
 .theme-toggle-btn {
     padding: 8px 12px;
     background-color: transparent;
@@ -694,9 +707,16 @@ body.keyboard-navigating .task-item:hover:not(:focus) {
 .deleted-task-item .task-name {
     flex: 1;
     min-width: 0;
-    max-width: calc(100% - 80px);
+    max-width: calc(100% - 140px);
     overflow: hidden;
     height: 20px;
+}
+
+.deleted-task-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
 }
 
 .deleted-task-item .task-name span {
@@ -743,6 +763,20 @@ body.keyboard-navigating .task-item:hover:not(:focus) {
 
 .restore-task-btn:hover {
     background-color: var(--color-action-hover);
+}
+
+.permanently-delete-task-btn {
+    padding: 4px 8px;
+    background-color: #e05555;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.permanently-delete-task-btn:hover {
+    background-color: #c03333;
 }
 
 .subtask-list .task-item {
