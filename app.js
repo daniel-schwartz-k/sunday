@@ -177,7 +177,10 @@ class TaskManager {
             document.getElementById('sync-btn').addEventListener('click', () => this.syncWithAirtable());
             document.getElementById('loading-dismiss-btn').addEventListener('click', () => this.hideLoading());
             if (localStorage.getItem('persistMode') !== 'AirTable') {
-                document.getElementById('sync-btn').disabled = true;
+                const syncBtn = document.getElementById('sync-btn');
+                syncBtn.disabled = true;
+                syncBtn.removeAttribute('title');
+                document.getElementById('sync-btn-wrapper').title = 'Sync is only available in AirTable mode';
             }
             document.querySelector('#deleted-tasks-panel .close-panel').addEventListener('click', () => {
                 this.closeDeletedTasksPanel();
@@ -1178,11 +1181,18 @@ class TaskManager {
                 taskElement.className = 'deleted-task-item';
                 taskElement.innerHTML = `
                     <div class="task-name"><span>${task.name}</span></div>
-                    <button class="restore-task-btn" data-task-id="${task.id}">Restore</button>
+                    <div class="deleted-task-actions">
+                        <button class="permanently-delete-task-btn" data-task-id="${task.id}">Delete</button>
+                        <button class="restore-task-btn" data-task-id="${task.id}">Restore</button>
+                    </div>
                 `;
 
                 taskElement.querySelector('.restore-task-btn').addEventListener('click', () => {
                     this.restoreTask(task);
+                });
+
+                taskElement.querySelector('.permanently-delete-task-btn').addEventListener('click', () => {
+                    this.permanentlyDeleteTask(task);
                 });
 
                 taskList.appendChild(taskElement);
@@ -1192,6 +1202,13 @@ class TaskManager {
             if (!wasActive) {
                 setTimeout(() => panel.querySelector('.deleted-tasks-search').focus(), 50);
             }
+        }
+
+        permanentlyDeleteTask(task) {
+            if (!confirm(`Permanently delete "${task.name}"?`)) return;
+            this.deletedTasks = this.deletedTasks.filter(t => t.id !== task.id);
+            this.saveToDb();
+            this.showDeletedTasksPanel();
         }
 
         restoreTask(task) {
