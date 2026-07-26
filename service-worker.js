@@ -1,5 +1,5 @@
 // service-worker.js
-const CACHE_NAME = 'sunday-app-cache-v5';
+const CACHE_NAME = 'sunday-app-cache-v6';
 const ASSETS_TO_CACHE = [
   '/sunday/',
   '/sunday/index.html',
@@ -18,6 +18,7 @@ const ASSETS_TO_CACHE = [
   '/sunday/vendor/playpen-sans/playpen-sans.css',
   '/sunday/vendor/playpen-sans/playpen-sans-latin-400.woff2',
   '/sunday/vendor/playpen-sans/playpen-sans-latin-ext-400.woff2',
+  '/sunday/vendor/dragdroptouch/drag-drop-touch.esm.min.js',
 ];
 
 self.addEventListener('install', event => {
