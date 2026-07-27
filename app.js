@@ -2,7 +2,7 @@ let apiKey = localStorage.getItem('airtable-token');
 let baseId = localStorage.getItem('airtable-baseId');
 let tableName = localStorage.getItem('airtable-tableName');
 const DataFiledName = 'data';
-const VERSION_DATE = '2026-07-27 21:32 UTC';
+const VERSION_DATE = '2026-07-27 20:37 UTC';
 
 function initPersistMode() {
     const persistMode = localStorage.getItem('persistMode');
@@ -585,7 +585,7 @@ class TaskManager {
                     const draggable = document.querySelector('.dragging');
                     
                     // Check if this is a subtask being dragged from task panel
-                    const dragData = e.dataTransfer ? e.dataTransfer.getData('application/json') : '';
+                    const dragData = e.dataTransfer.getData('application/json');
                     if (dragData) {
                         try {
                             const data = JSON.parse(dragData);
@@ -899,11 +899,7 @@ class TaskManager {
                     `;
                     
                     // Add drag event listeners for subtasks
-                    subtaskElement.addEventListener('dragstart', (e) => {
-                        if (e.dataTransfer) {
-                            e.dataTransfer.effectAllowed = 'move';
-                            e.dataTransfer.setData('text/plain', subtask.id);
-                        }
+                    subtaskElement.addEventListener('dragstart', () => {
                         subtaskElement.classList.add('dragging');
                     });
 
@@ -1044,12 +1040,7 @@ class TaskManager {
                 ${urlButton}
             `;
 
-            taskElement.addEventListener('dragstart', (e) => {
-                if (e.dataTransfer) {
-                    e.dataTransfer.effectAllowed = 'move';
-                    // Some touch/native DnD implementations require payload data for a valid drop.
-                    e.dataTransfer.setData('text/plain', task.id);
-                }
+            taskElement.addEventListener('dragstart', () => {
                 taskElement.classList.add('dragging');
             });
 
@@ -1751,11 +1742,7 @@ class TaskManager {
                     `;
                     
                     // Add drag event listeners for subtasks
-                    subtaskElement.addEventListener('dragstart', (e) => {
-                        if (e.dataTransfer) {
-                            e.dataTransfer.effectAllowed = 'move';
-                            e.dataTransfer.setData('text/plain', subtask.id);
-                        }
+                    subtaskElement.addEventListener('dragstart', () => {
                         subtaskElement.classList.add('dragging');
                     });
 
