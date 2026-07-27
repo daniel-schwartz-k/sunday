@@ -201,7 +201,6 @@ body {
     -webkit-user-drag: element;
     user-select: none;
     cursor: grab;
-    touch-action: none;
     border: 1px solid var(--color-border-secondary);
     transition: all 0.2s ease;
     width: 100%;

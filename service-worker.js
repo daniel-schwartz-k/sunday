@@ -1,5 +1,5 @@
 // service-worker.js
-const CACHE_NAME = 'sunday-app-cache-v6';
+const CACHE_NAME = 'sunday-app-cache-v5';
 const ASSETS_TO_CACHE = [
   '/sunday/',
   '/sunday/index.html',
@@ -18,7 +18,6 @@ const ASSETS_TO_CACHE = [
   '/sunday/vendor/highlightjs/base16-dracula.min.css',
   '/sunday/vendor/highlightjs/github.min.css',
   '/sunday/vendor/highlightjs/highlight.min.js',
-  '/sunday/vendor/dragdroptouch/drag-drop-touch.esm.min.js',
 ];
 
 self.addEventListener('install', event => {
