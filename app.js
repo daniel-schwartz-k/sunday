@@ -1039,13 +1039,7 @@ class TaskManager {
                 ${urlButton}
             `;
 
-            // Touch hold feedback: fires after 400ms hold (press-hold mode)
-            taskElement.addEventListener('draghold', () => {
-                taskElement.classList.add('drag-ready');
-            });
-
             taskElement.addEventListener('dragstart', () => {
-                taskElement.classList.remove('drag-ready');
                 taskElement.classList.add('dragging');
             });
 
@@ -1055,16 +1049,7 @@ class TaskManager {
 
             taskElement.addEventListener('dragend', () => {
                 taskElement.classList.remove('dragging');
-                taskElement.classList.remove('drag-ready');
                 taskElement.style.opacity = '1';
-            });
-
-            // Clear drag-ready if touch is cancelled (e.g. user scrolls instead)
-            taskElement.addEventListener('touchend', () => {
-                taskElement.classList.remove('drag-ready');
-            });
-            taskElement.addEventListener('touchcancel', () => {
-                taskElement.classList.remove('drag-ready');
             });
 
             // Prevent drag initialization on interactive elements
