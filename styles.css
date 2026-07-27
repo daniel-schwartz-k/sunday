@@ -889,10 +889,30 @@ body.keyboard-navigating .task-item:hover:not(:focus) {
     font-family: monospace;
     letter-spacing: 0.03em;
     z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .banner-version-tooltip.visible {
     opacity: 1;
+    pointer-events: auto;
+}
+
+.banner-version-tooltip .cache-clear-btn {
+    background: rgba(255, 107, 43, 0.25);
+    color: #ff6b2b;
+    border: 1px solid rgba(255, 107, 43, 0.5);
+    border-radius: 3px;
+    font-size: 10px;
+    font-family: monospace;
+    padding: 1px 5px;
+    cursor: pointer;
+    line-height: 1.4;
+}
+
+.banner-version-tooltip .cache-clear-btn:hover {
+    background: rgba(255, 107, 43, 0.45);
 }
 
 .hero-banner h1 {
