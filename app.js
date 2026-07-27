@@ -2,7 +2,7 @@ let apiKey = localStorage.getItem('airtable-token');
 let baseId = localStorage.getItem('airtable-baseId');
 let tableName = localStorage.getItem('airtable-tableName');
 const DataFiledName = 'data';
-const VERSION_DATE = '2026-07-27 21:32 UTC';
+const VERSION_DATE = '2026-07-27 21:41 UTC';
 
 function initPersistMode() {
     const persistMode = localStorage.getItem('persistMode');
@@ -582,7 +582,11 @@ class TaskManager {
 
                 list.addEventListener('drop', e => {
                     e.preventDefault();
-                    const draggable = document.querySelector('.dragging');
+                    const draggedTaskIdFromData = e.dataTransfer ? e.dataTransfer.getData('text/plain') : '';
+                    let draggable = document.querySelector('.dragging');
+                    if (!draggable && draggedTaskIdFromData) {
+                        draggable = document.querySelector(`[data-task-id="${draggedTaskIdFromData}"]`);
+                    }
                     
                     // Check if this is a subtask being dragged from task panel
                     const dragData = e.dataTransfer ? e.dataTransfer.getData('application/json') : '';
@@ -610,6 +614,15 @@ class TaskManager {
                         const fromColumnId = draggable.dataset.sourceColumn;
                         const toColumnId = list.closest('.task-column').id;
                         const taskId = draggable.dataset.taskId;
+
+                        // Ensure final placement is applied on drop even if dragover did not move
+                        // the source element (can happen on some touch/polyfill paths).
+                        const afterElement = this.getDragAfterElement(list, e.clientY);
+                        if (afterElement && afterElement !== draggable) {
+                            list.insertBefore(draggable, afterElement);
+                        } else if (!afterElement) {
+                            list.appendChild(draggable);
+                        }
                         
                         if (fromColumnId && toColumnId) {
                             if (fromColumnId !== toColumnId) {
