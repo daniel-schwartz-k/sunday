@@ -2,6 +2,7 @@ let apiKey = localStorage.getItem('airtable-token');
 let baseId = localStorage.getItem('airtable-baseId');
 let tableName = localStorage.getItem('airtable-tableName');
 const DataFiledName = 'data';
+const VERSION_DATE = '2026-07-27 19:47 UTC';
 
 function initPersistMode() {
     const persistMode = localStorage.getItem('persistMode');
@@ -1039,13 +1040,7 @@ class TaskManager {
                 ${urlButton}
             `;
 
-            // Touch hold feedback: fires after 400ms hold (press-hold mode)
-            taskElement.addEventListener('draghold', () => {
-                taskElement.classList.add('drag-ready');
-            });
-
             taskElement.addEventListener('dragstart', () => {
-                taskElement.classList.remove('drag-ready');
                 taskElement.classList.add('dragging');
             });
 
@@ -1055,16 +1050,7 @@ class TaskManager {
 
             taskElement.addEventListener('dragend', () => {
                 taskElement.classList.remove('dragging');
-                taskElement.classList.remove('drag-ready');
                 taskElement.style.opacity = '1';
-            });
-
-            // Clear drag-ready if touch is cancelled (e.g. user scrolls instead)
-            taskElement.addEventListener('touchend', () => {
-                taskElement.classList.remove('drag-ready');
-            });
-            taskElement.addEventListener('touchcancel', () => {
-                taskElement.classList.remove('drag-ready');
             });
 
             // Prevent drag initialization on interactive elements
@@ -2208,4 +2194,51 @@ class TaskManager {
         initPersistMode();
         ThemeManager.init();
         new TaskManager();
+        setupBannerVersionTooltip();
     });
+
+    function setupBannerVersionTooltip() {
+        const banner = document.querySelector('.hero-banner');
+        if (!banner) return;
+
+        let tooltip = null;
+        let holdTimer = null;
+
+        function showTooltip() {
+            if (tooltip) return;
+            tooltip = document.createElement('div');
+            tooltip.className = 'banner-version-tooltip';
+            tooltip.textContent = `v ${VERSION_DATE}`;
+            banner.appendChild(tooltip);
+            // Trigger animation
+            requestAnimationFrame(() => tooltip && tooltip.classList.add('visible'));
+        }
+
+        function hideTooltip() {
+            if (!tooltip) return;
+            const t = tooltip;
+            tooltip = null;
+            t.classList.remove('visible');
+            t.addEventListener('transitionend', () => t.remove(), { once: true });
+        }
+
+        function cancelHold() {
+            clearTimeout(holdTimer);
+            holdTimer = null;
+        }
+
+        banner.addEventListener('touchstart', (e) => {
+            cancelHold();
+            holdTimer = setTimeout(showTooltip, 400);
+        }, { passive: true });
+
+        banner.addEventListener('touchend', () => {
+            cancelHold();
+            setTimeout(hideTooltip, 1500);
+        }, { passive: true });
+
+        banner.addEventListener('touchcancel', () => {
+            cancelHold();
+            hideTooltip();
+        }, { passive: true });
+    }

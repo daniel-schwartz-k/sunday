@@ -70,3 +70,7 @@ Dark theme with orange accents defined in `styles.css`:
 - Background: `#1a1a1a`
 - Secondary background: `#2d2d2d`
 - Text: `#e0e0e0`
+
+## Version Tracking
+
+`VERSION_DATE` on line 5 of `app.js` must be updated to the current UTC time (`YYYY-MM-DD HH:MM UTC`) on **every code change**. Run `date -u '+%Y-%m-%d %H:%M UTC'` to get the value.
