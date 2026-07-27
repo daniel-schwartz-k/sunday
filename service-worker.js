@@ -1,14 +1,5 @@
 // service-worker.js
-const CACHE_NAME = 'sunday-app-cache-v7';
-const APP_SHELL_PATHS = [
-  '/sunday/',
-  '/sunday/index.html',
-  '/sunday/app.js',
-  '/sunday/styles.css',
-  '/sunday/models/task.js',
-  '/sunday/models/taskList.js',
-  '/sunday/manifest.webmanifest',
-];
+const CACHE_NAME = 'sunday-app-cache-v6';
 const ASSETS_TO_CACHE = [
   '/sunday/',
   '/sunday/index.html',
@@ -51,45 +42,9 @@ self.addEventListener('activate', event => {
 });
 
 self.addEventListener('fetch', event => {
-  if (event.request.method !== 'GET') return;
-
-  const requestUrl = new URL(event.request.url);
-  const isSameOrigin = requestUrl.origin === self.location.origin;
-  const requestPath = requestUrl.pathname;
-  const isDocument = event.request.mode === 'navigate';
-  const isAppShellAsset = APP_SHELL_PATHS.includes(requestPath);
-
-  // Always prefer network for navigations and core app shell assets so users get fresh code.
-  if (isSameOrigin && (isDocument || isAppShellAsset)) {
-    event.respondWith(
-      fetch(event.request)
-        .then(async response => {
-          const cache = await caches.open(CACHE_NAME);
-          cache.put(event.request, response.clone()).catch(() => {});
-          return response;
-        })
-        .catch(async () => {
-          const cached = await caches.match(event.request);
-          if (cached) return cached;
-          if (isDocument) {
-            return (await caches.match('/sunday/index.html')) || Response.error();
-          }
-          return Response.error();
-        })
-    );
-    return;
-  }
-
-  // Cache-first for static/vendor resources, fallback to network and backfill cache.
   event.respondWith(
-    caches.match(event.request).then(async response => {
-      if (response) return response;
-      const networkResponse = await fetch(event.request);
-      if (isSameOrigin) {
-        const cache = await caches.open(CACHE_NAME);
-        cache.put(event.request, networkResponse.clone()).catch(() => {});
-      }
-      return networkResponse;
+    caches.match(event.request).then(response => {
+      return response || fetch(event.request);
     })
   );
 });
