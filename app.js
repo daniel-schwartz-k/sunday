@@ -2,7 +2,7 @@ let apiKey = localStorage.getItem('airtable-token');
 let baseId = localStorage.getItem('airtable-baseId');
 let tableName = localStorage.getItem('airtable-tableName');
 const DataFiledName = 'data';
-const VERSION_DATE = '2026-07-27 19:55 UTC';
+const VERSION_DATE = '2026-07-27 19:47 UTC';
 
 function initPersistMode() {
     const persistMode = localStorage.getItem('persistMode');
@@ -2234,26 +2234,11 @@ class TaskManager {
 
         banner.addEventListener('touchend', () => {
             cancelHold();
-            setTimeout(hideTooltip, 10000);
+            setTimeout(hideTooltip, 1500);
         }, { passive: true });
 
         banner.addEventListener('touchcancel', () => {
             cancelHold();
             hideTooltip();
         }, { passive: true });
-
-        banner.addEventListener('mousedown', () => {
-            cancelHold();
-            holdTimer = setTimeout(showTooltip, 400);
-        });
-
-        banner.addEventListener('mouseup', () => {
-            cancelHold();
-            setTimeout(hideTooltip, 10000);
-        });
-
-        banner.addEventListener('mouseleave', () => {
-            cancelHold();
-            hideTooltip();
-        });
     }
