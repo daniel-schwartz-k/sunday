@@ -2,7 +2,7 @@ let apiKey = localStorage.getItem('airtable-token');
 let baseId = localStorage.getItem('airtable-baseId');
 let tableName = localStorage.getItem('airtable-tableName');
 const DataFiledName = 'data';
-const VERSION_DATE = '2026-07-27 19:59 UTC';
+const VERSION_DATE = '2026-07-27 19:55 UTC';
 
 function initPersistMode() {
     const persistMode = localStorage.getItem('persistMode');
@@ -2208,25 +2208,9 @@ class TaskManager {
             if (tooltip) return;
             tooltip = document.createElement('div');
             tooltip.className = 'banner-version-tooltip';
-
-            const label = document.createElement('span');
-            label.textContent = `v ${VERSION_DATE}`;
-            tooltip.appendChild(label);
-
-            const btn = document.createElement('button');
-            btn.className = 'cache-clear-btn';
-            btn.textContent = 'clear cache';
-            btn.addEventListener('click', async (e) => {
-                e.stopPropagation();
-                btn.textContent = 'clearing…';
-                btn.disabled = true;
-                const keys = await caches.keys();
-                await Promise.all(keys.map(k => caches.delete(k)));
-                location.reload();
-            });
-            tooltip.appendChild(btn);
-
+            tooltip.textContent = `v ${VERSION_DATE}`;
             banner.appendChild(tooltip);
+            // Trigger animation
             requestAnimationFrame(() => tooltip && tooltip.classList.add('visible'));
         }
 
