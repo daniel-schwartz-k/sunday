@@ -203,12 +203,28 @@ body {
     cursor: grab;
     touch-action: manipulation;
     border: 1px solid var(--color-border-secondary);
-    transition: background-color 0.06s linear, border-color 0.06s linear;
+    transition: background-color 0.06s linear, border-color 0.06s linear, box-shadow 0.15s ease, transform 0.15s ease;
     width: 100%;
     min-width: 0;
     max-width: 100%;
 }
 
+/* Touch hold feedback — fires when finger has held long enough to drag */
+@keyframes drag-ready-pulse {
+    0%   { box-shadow: 0 0 0 0px rgba(255, 107, 43, 0.6); }
+    60%  { box-shadow: 0 0 0 6px rgba(255, 107, 43, 0); }
+    100% { box-shadow: 0 0 0 2px var(--color-accent), 0 4px 16px rgba(255, 107, 43, 0.35); }
+}
+
+.task-item.drag-ready {
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 2px var(--color-accent), 0 4px 16px rgba(255, 107, 43, 0.35);
+    transform: scale(1.02);
+    cursor: grabbing;
+    z-index: 10;
+    position: relative;
+    animation: drag-ready-pulse 0.35s ease-out forwards;
+}
 
 .task-item:hover, .task-item:focus {
     background: var(--color-bg-hover);
@@ -872,27 +888,6 @@ body.keyboard-navigating .task-item:hover:not(:focus) {
     position: relative;
     border: 1px solid var(--color-border-primary);
     transition: background-color 0.3s ease, border-color 0.3s ease;
-}
-
-.banner-version-tooltip {
-    position: absolute;
-    bottom: 8px;
-    right: 10px;
-    background: rgba(0, 0, 0, 0.75);
-    color: #e0e0e0;
-    font-size: 11px;
-    padding: 3px 8px;
-    border-radius: 4px;
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 0.2s ease;
-    font-family: monospace;
-    letter-spacing: 0.03em;
-    z-index: 10;
-}
-
-.banner-version-tooltip.visible {
-    opacity: 1;
 }
 
 .hero-banner h1 {
