@@ -2,7 +2,7 @@ let apiKey = localStorage.getItem('airtable-token');
 let baseId = localStorage.getItem('airtable-baseId');
 let tableName = localStorage.getItem('airtable-tableName');
 const DataFiledName = 'data';
-const VERSION_DATE = '2026-07-27 22:05 UTC';
+const VERSION_DATE = '2026-07-27 22:10 UTC';
 
 function initPersistMode() {
     const persistMode = localStorage.getItem('persistMode');
@@ -51,6 +51,10 @@ class TaskManager {
             this.currentlyEditingParentTask = null;
             this.isDragging = false;
             this._dropTargetTaskId = null;
+            this._dropTargetCandidateId = null;
+            this._dropTargetArmed = false;
+            this._dropTargetArmTimer = null;
+            this._dropTargetArmDelayMs = 650;
             this._activeDragTaskId = null;
             this._activeDragSourceColumn = null;
             this._panelPendingTags = [];
@@ -603,11 +607,13 @@ class TaskManager {
                         if (canNest) {
                             const rect = hoveredTask.getBoundingClientRect();
                             const yInTask = e.clientY - rect.top;
-                            const inNestZone = yInTask > rect.height * 0.25 && yInTask < rect.height * 0.75;
+                            const inNestZone = yInTask >= 0 && yInTask <= rect.height * 0.22;
                             if (inNestZone) {
-                                this.clearTaskDropHighlights();
-                                this._dropTargetTaskId = hoveredTask.dataset.taskId;
-                                hoveredTask.style.boxShadow = '0 0 0 2px #ff6b2b';
+                                this.armTaskDropTarget(hoveredTask);
+                                // Keep dragged task directly above the potential parent while arming.
+                                if (hoveredTask !== draggable) {
+                                    list.insertBefore(draggable, hoveredTask);
+                                }
                                 return;
                             }
                         }
@@ -660,15 +666,7 @@ class TaskManager {
                         const toColumnId = list.closest('.task-column').id;
                         const taskId = draggable.dataset.taskId || this._activeDragTaskId;
 
-                        if (!this._dropTargetTaskId) {
-                            const pointTarget = document.elementFromPoint(e.clientX, e.clientY);
-                            const hoveredTask = pointTarget ? pointTarget.closest('.task-item:not(.dragging)') : null;
-                            if (hoveredTask && !hoveredTask.closest('.subtask-list') && hoveredTask.dataset.taskId && hoveredTask.dataset.taskId !== taskId) {
-                                this._dropTargetTaskId = hoveredTask.dataset.taskId;
-                            }
-                        }
-
-                        if (taskId && fromColumnId && this._dropTargetTaskId && this._dropTargetTaskId !== taskId) {
+                        if (taskId && fromColumnId && this._dropTargetArmed && this._dropTargetTaskId && this._dropTargetTaskId !== taskId) {
                             const targetTaskId = this._dropTargetTaskId;
                             this.clearTaskDropHighlights();
                             this.moveTaskToSubtask(taskId, fromColumnId, targetTaskId);
@@ -793,8 +791,46 @@ class TaskManager {
         clearTaskDropHighlights() {
             document.querySelectorAll('.task-item').forEach(taskItem => {
                 taskItem.style.boxShadow = '';
+                taskItem.style.borderColor = '';
             });
             this._dropTargetTaskId = null;
+            this._dropTargetCandidateId = null;
+            this._dropTargetArmed = false;
+            if (this._dropTargetArmTimer) {
+                clearTimeout(this._dropTargetArmTimer);
+                this._dropTargetArmTimer = null;
+            }
+        }
+
+        armTaskDropTarget(taskElement) {
+            const taskId = taskElement.dataset.taskId;
+            if (!taskId) return;
+
+            if (this._dropTargetArmed && this._dropTargetTaskId === taskId) {
+                taskElement.style.boxShadow = '0 0 0 3px #ff6b2b, 0 0 18px rgba(255, 107, 43, 0.45)';
+                taskElement.style.borderColor = '#ff6b2b';
+                return;
+            }
+
+            if (this._dropTargetCandidateId === taskId && !this._dropTargetArmed) {
+                return;
+            }
+
+            this.clearTaskDropHighlights();
+            this._dropTargetCandidateId = taskId;
+            taskElement.style.boxShadow = '0 0 0 2px rgba(255, 107, 43, 0.6)';
+            taskElement.style.borderColor = 'rgba(255, 107, 43, 0.95)';
+
+            this._dropTargetArmTimer = setTimeout(() => {
+                if (this._dropTargetCandidateId !== taskId) return;
+                this._dropTargetArmed = true;
+                this._dropTargetTaskId = taskId;
+                const armedTarget = document.querySelector(`.task-item[data-task-id="${taskId}"]`);
+                if (armedTarget) {
+                    armedTarget.style.boxShadow = '0 0 0 3px #ff6b2b, 0 0 18px rgba(255, 107, 43, 0.45)';
+                    armedTarget.style.borderColor = '#ff6b2b';
+                }
+            }, this._dropTargetArmDelayMs);
         }
 
         reconcileMainListsFromDom() {
@@ -2315,9 +2351,21 @@ class TaskManager {
                 e.stopPropagation();
                 btn.textContent = 'clearing…';
                 btn.disabled = true;
-                const keys = await caches.keys();
-                await Promise.all(keys.map(k => caches.delete(k)));
-                location.reload();
+                try {
+                    if ('serviceWorker' in navigator) {
+                        const registrations = await navigator.serviceWorker.getRegistrations();
+                        await Promise.all(registrations.map(reg => reg.unregister()));
+                    }
+
+                    if ('caches' in window) {
+                        const keys = await caches.keys();
+                        await Promise.all(keys.map(k => caches.delete(k)));
+                    }
+                } finally {
+                    // Force a non-cached top-level navigation after cache/SW reset.
+                    const nextUrl = `${location.pathname}?nocache=${Date.now()}${location.hash || ''}`;
+                    location.replace(nextUrl);
+                }
             });
             tooltip.appendChild(btn);
 
