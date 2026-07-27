@@ -1196,7 +1196,6 @@ body.keyboard-navigating .task-item:hover:not(:focus) {
 }
 
 .task-panel.dragging-subtask {
-    background-color: var(--color-overlay-drag);
 }
 
 @media screen and (min-width: 768px) {
