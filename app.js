@@ -2,7 +2,7 @@ let apiKey = localStorage.getItem('airtable-token');
 let baseId = localStorage.getItem('airtable-baseId');
 let tableName = localStorage.getItem('airtable-tableName');
 const DataFiledName = 'data';
-const VERSION_DATE = '2026-07-27 21:59 UTC';
+const VERSION_DATE = '2026-07-27 22:05 UTC';
 
 function initPersistMode() {
     const persistMode = localStorage.getItem('persistMode');
@@ -51,6 +51,8 @@ class TaskManager {
             this.currentlyEditingParentTask = null;
             this.isDragging = false;
             this._dropTargetTaskId = null;
+            this._activeDragTaskId = null;
+            this._activeDragSourceColumn = null;
             this._panelPendingTags = [];
             this._faviconCache = new Map();
             this.initializeQuillEditors();
@@ -501,6 +503,13 @@ class TaskManager {
                     } else {
                         subtaskList.appendChild(draggable);
                     }
+                } else if (draggable && draggable.dataset.taskId) {
+                    const hoveredSubtask = e.target.closest('.task-item[data-subtask-id]');
+                    this.clearTaskDropHighlights();
+                    if (hoveredSubtask) {
+                        this._dropTargetTaskId = hoveredSubtask.dataset.subtaskId;
+                        hoveredSubtask.style.boxShadow = '0 0 0 2px #ff6b2b';
+                    }
                 }
             });
 
@@ -520,6 +529,16 @@ class TaskManager {
                     });
                     this.currentlyEditingTask.subtasks = newSubtasksOrder;
                     this.saveToDb();
+                } else if (draggable && draggable.dataset.taskId) {
+                    const fromColumnId = draggable.dataset.sourceColumn || this._activeDragSourceColumn;
+                    const taskId = draggable.dataset.taskId || this._activeDragTaskId;
+                    const hoveredSubtask = e.target.closest('.task-item[data-subtask-id]');
+                    const targetTaskId = (hoveredSubtask && hoveredSubtask.dataset.subtaskId) || this._dropTargetTaskId;
+
+                    if (fromColumnId && taskId && targetTaskId && taskId !== targetTaskId) {
+                        this.moveTaskToSubtask(taskId, fromColumnId, targetTaskId);
+                    }
+                    this.clearTaskDropHighlights();
                 }
             });
         }
@@ -534,8 +553,11 @@ class TaskManager {
 
             document.addEventListener('dragend', () => {
                 setTimeout(() => {
+                    this.reconcileMainListsFromDom();
                     this.isDragging = false;
                     this.clearTaskDropHighlights();
+                    this._activeDragTaskId = null;
+                    this._activeDragSourceColumn = null;
                     // Remove any lingering classes
                     document.querySelectorAll('.task-panel, .deleted-tasks-panel').forEach(panel => {
                         panel.classList.remove('no-click');
@@ -573,7 +595,8 @@ class TaskManager {
                     e.preventDefault();
                     const draggable = document.querySelector('.dragging');
                     if (draggable) {
-                        const hoveredTask = e.target.closest('.task-item:not(.dragging)');
+                        const pointTarget = document.elementFromPoint(e.clientX, e.clientY);
+                        const hoveredTask = e.target.closest('.task-item:not(.dragging)') || (pointTarget ? pointTarget.closest('.task-item:not(.dragging)') : null);
                         const isMainTaskTarget = hoveredTask && !hoveredTask.closest('.subtask-list');
                         const canNest = isMainTaskTarget && hoveredTask.dataset.taskId && draggable.dataset.taskId && hoveredTask.dataset.taskId !== draggable.dataset.taskId;
 
@@ -606,6 +629,9 @@ class TaskManager {
                     if (!draggable && draggedTaskIdFromData) {
                         draggable = document.querySelector(`[data-task-id="${draggedTaskIdFromData}"]`);
                     }
+                    if (!draggable && this._activeDragTaskId) {
+                        draggable = document.querySelector(`[data-task-id="${this._activeDragTaskId}"]`);
+                    }
                     
                     // Check if this is a subtask being dragged from task panel
                     const dragData = e.dataTransfer ? e.dataTransfer.getData('application/json') : '';
@@ -630,9 +656,17 @@ class TaskManager {
 
                     // Handle regular task dragging
                     if (draggable) {
-                        const fromColumnId = draggable.dataset.sourceColumn;
+                        const fromColumnId = draggable.dataset.sourceColumn || this._activeDragSourceColumn;
                         const toColumnId = list.closest('.task-column').id;
-                        const taskId = draggable.dataset.taskId;
+                        const taskId = draggable.dataset.taskId || this._activeDragTaskId;
+
+                        if (!this._dropTargetTaskId) {
+                            const pointTarget = document.elementFromPoint(e.clientX, e.clientY);
+                            const hoveredTask = pointTarget ? pointTarget.closest('.task-item:not(.dragging)') : null;
+                            if (hoveredTask && !hoveredTask.closest('.subtask-list') && hoveredTask.dataset.taskId && hoveredTask.dataset.taskId !== taskId) {
+                                this._dropTargetTaskId = hoveredTask.dataset.taskId;
+                            }
+                        }
 
                         if (taskId && fromColumnId && this._dropTargetTaskId && this._dropTargetTaskId !== taskId) {
                             const targetTaskId = this._dropTargetTaskId;
@@ -662,6 +696,7 @@ class TaskManager {
                     }
 
                     this.clearTaskDropHighlights();
+                    this.reconcileMainListsFromDom();
                 });
             });
 
@@ -735,6 +770,26 @@ class TaskManager {
             this.saveToDb();
         }
 
+        findTaskById(taskId) {
+            const search = (task, rootTask) => {
+                if (task.id === taskId) return { task, rootTask };
+                for (const subtask of (task.subtasks || [])) {
+                    const found = search(subtask, rootTask);
+                    if (found) return found;
+                }
+                return null;
+            };
+
+            for (const list of Object.values(this.lists)) {
+                for (const rootTask of list.tasks) {
+                    const found = search(rootTask, rootTask);
+                    if (found) return found;
+                }
+            }
+
+            return null;
+        }
+
         clearTaskDropHighlights() {
             document.querySelectorAll('.task-item').forEach(taskItem => {
                 taskItem.style.boxShadow = '';
@@ -742,21 +797,55 @@ class TaskManager {
             this._dropTargetTaskId = null;
         }
 
+        reconcileMainListsFromDom() {
+            const columnIds = ['on-it', 'next-up', 'back-log'];
+            const taskMap = new Map();
+
+            columnIds.forEach(columnId => {
+                this.lists[columnId].tasks.forEach(task => {
+                    taskMap.set(task.id, task);
+                });
+            });
+
+            const nextLists = {
+                'on-it': [],
+                'next-up': [],
+                'back-log': []
+            };
+
+            columnIds.forEach(columnId => {
+                const elements = document.querySelectorAll(`#${columnId} .task-list > .task-item[data-task-id]`);
+                elements.forEach(element => {
+                    const taskId = element.dataset.taskId;
+                    const task = taskMap.get(taskId);
+                    if (task) {
+                        element.dataset.sourceColumn = columnId;
+                        nextLists[columnId].push(task);
+                    }
+                });
+            });
+
+            let changed = false;
+            columnIds.forEach(columnId => {
+                const prev = this.lists[columnId].tasks;
+                const next = nextLists[columnId];
+                if (prev.length !== next.length || prev.some((task, idx) => task.id !== next[idx]?.id)) {
+                    changed = true;
+                    this.lists[columnId].tasks = next;
+                }
+            });
+
+            if (changed) {
+                this.saveToDb();
+            }
+        }
+
         moveTaskToSubtask(taskId, fromColumnId, targetTaskId) {
             // Find the source task and target task
             const sourceTask = this.lists[fromColumnId].getTask(taskId);
-            let targetTask = null;
-            
-            // Search for target task in all lists
-            for (const listKey in this.lists) {
-                const potentialTargetTask = this.lists[listKey].getTask(targetTaskId);
-                if (potentialTargetTask) {
-                    targetTask = potentialTargetTask;
-                    break;
-                }
-            }
+            const targetInfo = this.findTaskById(targetTaskId);
 
-            if (sourceTask && targetTask) {
+            if (sourceTask && targetInfo && targetInfo.task) {
                 // Remove task from its original list
                 this.lists[fromColumnId].removeTask(taskId);
                 
@@ -770,13 +859,23 @@ class TaskManager {
                 );
                 subtask.subtasks = sourceTask.subtasks; // Preserve any existing subtasks
                 
-                targetTask.addSubtask(subtask);
+                targetInfo.task.addSubtask(subtask);
                 
                 // Remove the dragged element from DOM
                 document.querySelector(`[data-task-id="${taskId}"]`).remove();
                 
-                // Update the target task's display
-                this.updateTaskElement(targetTask);
+                // Update the root task card that contains the target.
+                this.updateTaskElement(targetInfo.rootTask);
+
+                // If the task panel is open for the same root task, refresh subtasks view.
+                if (
+                    this.currentlyEditingTask &&
+                    this.currentlyEditingTask.id &&
+                    this.currentlyEditingTask.id === targetInfo.rootTask.id &&
+                    document.getElementById('task-panel').classList.contains('active')
+                ) {
+                    this.refreshSubtasksList(targetInfo.rootTask);
+                }
                 
                 // Save changes
                 this.saveToDb();
@@ -1064,6 +1163,8 @@ class TaskManager {
                     // Some touch/native DnD implementations require payload data for a valid drop.
                     e.dataTransfer.setData('text/plain', task.id);
                 }
+                this._activeDragTaskId = task.id;
+                this._activeDragSourceColumn = taskElement.dataset.sourceColumn || columnId;
                 taskElement.classList.add('dragging');
             });
 
@@ -1074,6 +1175,7 @@ class TaskManager {
             taskElement.addEventListener('dragend', () => {
                 taskElement.classList.remove('dragging');
                 taskElement.style.opacity = '1';
+                this.reconcileMainListsFromDom();
             });
 
             // (polyfill no longer calls preventDefault on touchstart in press-hold mode,
