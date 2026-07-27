@@ -116,6 +116,10 @@ body {
     transition: background-color 0.3s ease, color 0.3s ease;
 }
 
+body.subtask-dragging {
+    overflow: hidden;
+}
+
 .page-wrapper {
     width: 100%;
     max-width: 1200px;
@@ -201,7 +205,7 @@ body {
     -webkit-user-drag: element;
     user-select: none;
     cursor: grab;
-    touch-action: none;
+    touch-action: manipulation;
     border: 1px solid var(--color-border-secondary);
     transition: all 0.2s ease;
     width: 100%;
