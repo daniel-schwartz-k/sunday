@@ -2,7 +2,7 @@ let apiKey = localStorage.getItem('airtable-token');
 let baseId = localStorage.getItem('airtable-baseId');
 let tableName = localStorage.getItem('airtable-tableName');
 const DataFiledName = 'data';
-const VERSION_DATE = '2026-07-27 20:15 UTC';
+const VERSION_DATE = '2026-07-27 20:37 UTC';
 
 function initPersistMode() {
     const persistMode = localStorage.getItem('persistMode');
@@ -1053,17 +1053,8 @@ class TaskManager {
                 taskElement.style.opacity = '1';
             });
 
-            // Allow scroll on light tap; lock scroll only once hold delay matches polyfill's 400ms
-            let _touchHoldTimer = null;
-            taskElement.addEventListener('touchstart', () => {
-                _touchHoldTimer = setTimeout(() => { taskElement.style.touchAction = 'none'; }, 400);
-            }, { passive: true });
-            const _clearTouchHold = () => {
-                clearTimeout(_touchHoldTimer);
-                taskElement.style.touchAction = '';
-            };
-            taskElement.addEventListener('touchend', _clearTouchHold, { passive: true });
-            taskElement.addEventListener('touchcancel', _clearTouchHold, { passive: true });
+            // (polyfill no longer calls preventDefault on touchstart in press-hold mode,
+            // so light taps scroll freely; touch-action: pan-y in CSS keeps this safe)
 
             // Prevent drag initialization on interactive elements
             taskElement.querySelector('.task-checkbox').addEventListener('mousedown', e => e.stopPropagation());
@@ -2256,7 +2247,7 @@ class TaskManager {
         function onTap() {
             tapCount++;
             clearTimeout(tapTimer);
-            if (tapCount >= 4) {
+            if (tapCount >= 3) {
                 tapCount = 0;
                 showTooltip();
             } else {
