@@ -2,7 +2,7 @@ let apiKey = localStorage.getItem('airtable-token');
 let baseId = localStorage.getItem('airtable-baseId');
 let tableName = localStorage.getItem('airtable-tableName');
 const DataFiledName = 'data';
-const VERSION_DATE = '2026-07-27 20:15 UTC';
+const VERSION_DATE = '2026-07-27 19:59 UTC';
 
 function initPersistMode() {
     const persistMode = localStorage.getItem('persistMode');
@@ -1052,18 +1052,6 @@ class TaskManager {
                 taskElement.classList.remove('dragging');
                 taskElement.style.opacity = '1';
             });
-
-            // Allow scroll on light tap; lock scroll only once hold delay matches polyfill's 400ms
-            let _touchHoldTimer = null;
-            taskElement.addEventListener('touchstart', () => {
-                _touchHoldTimer = setTimeout(() => { taskElement.style.touchAction = 'none'; }, 400);
-            }, { passive: true });
-            const _clearTouchHold = () => {
-                clearTimeout(_touchHoldTimer);
-                taskElement.style.touchAction = '';
-            };
-            taskElement.addEventListener('touchend', _clearTouchHold, { passive: true });
-            taskElement.addEventListener('touchcancel', _clearTouchHold, { passive: true });
 
             // Prevent drag initialization on interactive elements
             taskElement.querySelector('.task-checkbox').addEventListener('mousedown', e => e.stopPropagation());
@@ -2214,9 +2202,7 @@ class TaskManager {
         if (!banner) return;
 
         let tooltip = null;
-        let tapCount = 0;
-        let tapTimer = null;
-        const TAP_WINDOW = 800; // ms window to land 4 taps
+        let holdTimer = null;
 
         function showTooltip() {
             if (tooltip) return;
@@ -2242,7 +2228,6 @@ class TaskManager {
 
             banner.appendChild(tooltip);
             requestAnimationFrame(() => tooltip && tooltip.classList.add('visible'));
-            setTimeout(hideTooltip, 10000);
         }
 
         function hideTooltip() {
@@ -2253,16 +2238,38 @@ class TaskManager {
             t.addEventListener('transitionend', () => t.remove(), { once: true });
         }
 
-        function onTap() {
-            tapCount++;
-            clearTimeout(tapTimer);
-            if (tapCount >= 4) {
-                tapCount = 0;
-                showTooltip();
-            } else {
-                tapTimer = setTimeout(() => { tapCount = 0; }, TAP_WINDOW);
-            }
+        function cancelHold() {
+            clearTimeout(holdTimer);
+            holdTimer = null;
         }
 
-        banner.addEventListener('click', onTap);
+        banner.addEventListener('touchstart', (e) => {
+            cancelHold();
+            holdTimer = setTimeout(showTooltip, 400);
+        }, { passive: true });
+
+        banner.addEventListener('touchend', () => {
+            cancelHold();
+            setTimeout(hideTooltip, 10000);
+        }, { passive: true });
+
+        banner.addEventListener('touchcancel', () => {
+            cancelHold();
+            hideTooltip();
+        }, { passive: true });
+
+        banner.addEventListener('mousedown', () => {
+            cancelHold();
+            holdTimer = setTimeout(showTooltip, 400);
+        });
+
+        banner.addEventListener('mouseup', () => {
+            cancelHold();
+            setTimeout(hideTooltip, 10000);
+        });
+
+        banner.addEventListener('mouseleave', () => {
+            cancelHold();
+            hideTooltip();
+        });
     }
