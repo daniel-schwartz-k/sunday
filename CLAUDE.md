@@ -55,6 +55,11 @@ Single-page vanilla JS app. All logic lives in one `TaskManager` class in `app.j
 
 **Service worker** (`service-worker.js`): caches all static assets under `CACHE_NAME = 'sunday-app-cache-v2'`. When adding new vendor files, add them to `ASSETS_TO_CACHE`. The cache name must be bumped to invalidate old caches.
 
+## Version Stamp
+
+`app.js` line 2 holds `APP_VERSION` — a string in `'YYYY-MM-DD HH:MM'` format.
+**Update it on every code change** so the dev version badge (triple-click the banner) always reflects the latest edit timestamp.
+
 ## Key Conventions
 
 - Task IDs are `Date.now().toString()` — millisecond timestamps as strings

@@ -1,3 +1,6 @@
+// Dev version stamp — updated on every code change (format: YYYY-MM-DD HH:MM)
+const APP_VERSION = '2026-07-29 14:35';
+
 let apiKey = localStorage.getItem('airtable-token');
 let baseId = localStorage.getItem('airtable-baseId');
 let tableName = localStorage.getItem('airtable-tableName');
@@ -54,6 +57,7 @@ class TaskManager {
             this.initializeQuillEditors();
             this.loadFromDb();
             this.setupEventListeners();
+            this.setupVersionBadge();
             this.focusFirstTask();
         }
 
@@ -519,6 +523,53 @@ class TaskManager {
                     this.currentlyEditingTask.subtasks = newSubtasksOrder;
                     this.saveToDb();
                 }
+            });
+        }
+
+        setupVersionBadge() {
+            const banner = document.querySelector('.hero-banner');
+            const badge = document.getElementById('version-badge');
+            const versionText = document.getElementById('version-text');
+            const clearCacheBtn = document.getElementById('clear-cache-btn');
+
+            let clickCount = 0;
+            let clickTimer = null;
+
+            banner.addEventListener('click', (e) => {
+                // Ignore clicks on the badge itself
+                if (e.target.closest('.version-badge')) return;
+
+                clickCount++;
+                clearTimeout(clickTimer);
+                clickTimer = setTimeout(() => { clickCount = 0; }, 600);
+
+                if (clickCount >= 3) {
+                    clickCount = 0;
+                    clearTimeout(clickTimer);
+                    versionText.textContent = 'V ' + APP_VERSION;
+                    badge.classList.add('active');
+                }
+            });
+
+            // Hide badge when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('.hero-banner')) {
+                    badge.classList.remove('active');
+                }
+            });
+
+            clearCacheBtn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                if (!confirm('Clear service worker cache? The page will reload with a fresh version.')) return;
+                if ('caches' in window) {
+                    const keys = await caches.keys();
+                    await Promise.all(keys.map(k => caches.delete(k)));
+                }
+                if ('serviceWorker' in navigator) {
+                    const reg = await navigator.serviceWorker.getRegistration();
+                    if (reg) await reg.unregister();
+                }
+                location.reload(true);
             });
         }
 
