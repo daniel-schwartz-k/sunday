@@ -1,10 +1,11 @@
 // service-worker.js
-const CACHE_NAME = 'sunday-app-cache-v5';
+const CACHE_NAME = 'sunday-app-cache-v6';
 const ASSETS_TO_CACHE = [
   '/sunday/',
   '/sunday/index.html',
   '/sunday/styles.css',
   '/sunday/app.js',
+  '/sunday/touch-dnd.js',
   '/sunday/models/task.js',
   '/sunday/models/taskList.js',
   '/sunday/banners/dark-sunday.png',
