@@ -1648,3 +1648,11 @@ body.keyboard-navigating .task-item:hover:not(:focus) {
 .version-badge .clear-cache-btn:hover {
     background: #b71c1c;
 }
+
+.version-badge .reconfigure-btn {
+    background: #1565c0;
+}
+
+.version-badge .reconfigure-btn:hover {
+    background: #0d47a1;
+}

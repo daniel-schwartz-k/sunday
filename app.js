@@ -1,5 +1,5 @@
 // Dev version stamp — updated on every code change (format: YYYY-MM-DD HH:MM)
-const APP_VERSION = '2026-07-29 14:35';
+const APP_VERSION = '2026-07-29 14:50';
 
 let apiKey = localStorage.getItem('airtable-token');
 let baseId = localStorage.getItem('airtable-baseId');
@@ -570,6 +570,16 @@ class TaskManager {
                     if (reg) await reg.unregister();
                 }
                 location.reload(true);
+            });
+
+            const reconfigureBtn = document.getElementById('reconfigure-btn');
+            reconfigureBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                localStorage.removeItem('persistMode');
+                localStorage.removeItem('airtable-token');
+                localStorage.removeItem('airtable-baseId');
+                localStorage.removeItem('airtable-tableName');
+                location.reload();
             });
         }
 
