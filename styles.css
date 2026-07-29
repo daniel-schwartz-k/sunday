@@ -202,7 +202,6 @@ body {
     user-select: none;
     cursor: grab;
     border: 1px solid var(--color-border-secondary);
-    transition: background-color 0.06s linear, border-color 0.06s linear;
     width: 100%;
     min-width: 0;
     max-width: 100%;
@@ -787,7 +786,6 @@ body.keyboard-navigating .task-item:hover:not(:focus) {
     width: 100%;
     min-width: 0;
     cursor: grab;
-    transition: background-color 0.06s linear, border-color 0.06s linear;
 }
 
 .subtask-list .task-item .task-name {
