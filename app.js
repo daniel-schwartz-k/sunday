@@ -1,5 +1,5 @@
 // Dev version stamp — updated on every code change (format: YYYY-MM-DD HH:MM)
-const APP_VERSION = '2026-07-29 17:00';
+const APP_VERSION = '2026-07-29 15:05';
 
 let apiKey = localStorage.getItem('airtable-token');
 let baseId = localStorage.getItem('airtable-baseId');
@@ -2253,5 +2253,5 @@ class TaskManager {
     document.addEventListener('DOMContentLoaded', () => {
         initPersistMode();
         ThemeManager.init();
-        window.taskManager = new TaskManager();
+        new TaskManager();
     });
