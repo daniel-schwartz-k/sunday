@@ -57,7 +57,7 @@ Single-page vanilla JS app. All logic lives in one `TaskManager` class in `app.j
 
 ## Version Stamp
 
-`app.js` line 2 holds `APP_VERSION` — a string in `'YYYY-MM-DD HH:MM'` format.
+`app.js` line 2 holds `APP_VERSION` — a string in `'YYYY-MM-DD HH:MM UTC'` format.
 **Update it on every code change** so the dev version badge (triple-click the banner) always reflects the latest edit timestamp.
 
 ## Key Conventions
