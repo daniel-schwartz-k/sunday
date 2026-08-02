@@ -149,6 +149,11 @@ body {
     width: 100%;
     min-width: 100px;
     transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+    /* A touch that drifts off a .task-item before the long-press arms (e.g. while
+       trying to pick up a card) must not trigger the browser's native text-selection
+       magnifier on a column header or other text underneath it. */
+    -webkit-touch-callout: none;
+    user-select: none;
 }
 
 .task-column h2 {
@@ -200,11 +205,15 @@ body {
     gap: 10px;
     -webkit-user-drag: element;
     user-select: none;
+    -webkit-touch-callout: none;
     cursor: grab;
     border: 1px solid var(--color-border-secondary);
     width: 100%;
     min-width: 0;
     max-width: 100%;
+    /* Let a quick vertical swipe scroll natively; touch-drag is gated behind a
+       long-press in JS (setupTouchDragAndDrop), which preventDefaults the move. */
+    touch-action: pan-y;
 }
 
 .task-item:hover, .task-item:focus {
@@ -229,6 +238,16 @@ body.keyboard-navigating .task-item:hover:not(:focus) {
     opacity: 0.5;
     border: 2px dashed var(--color-action);
     background: var(--color-bg-hover);
+}
+
+/* Extra "picked up" cue for touch drags (see setupTouchDragAndDrop), where there's
+   no cursor change to signal grabbing. Scoped to coarse/no-hover pointers so
+   desktop's native drag ghost image is unaffected. */
+@media (hover: none) and (pointer: coarse) {
+    .task-item.dragging {
+        transform: scale(1.02);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    }
 }
 
 .task-url-link {
@@ -573,6 +592,11 @@ body.keyboard-navigating .task-item:hover:not(:focus) {
     margin-top: 15px;
     border-top: 1px solid var(--color-border-secondary);
     padding-top: 15px;
+    /* Same reasoning as .task-column: a touch that drifts off a subtask card
+       before the long-press arms must not trigger the native text-selection
+       magnifier on the "Subtasks" heading or other text in this section. */
+    -webkit-touch-callout: none;
+    user-select: none;
 }
 
 .subtask-list {
@@ -786,6 +810,7 @@ body.keyboard-navigating .task-item:hover:not(:focus) {
     width: 100%;
     min-width: 0;
     cursor: grab;
+    touch-action: pan-y;
 }
 
 .subtask-list .task-item .task-name {
@@ -821,6 +846,13 @@ body.keyboard-navigating .task-item:hover:not(:focus) {
     border: 2px dashed var(--color-action);
     background: var(--color-bg-hover);
     cursor: grabbing;
+}
+
+@media (hover: none) and (pointer: coarse) {
+    .subtask-list .task-item.dragging {
+        transform: scale(1.02);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    }
 }
 
 .subtask-list .task-item:active {

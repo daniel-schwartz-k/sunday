@@ -1,5 +1,5 @@
 // Dev version stamp — updated on every code change (format: YYYY-MM-DD HH:MM)
-const APP_VERSION = '2026-07-29 19:01 UTC';
+const APP_VERSION = '2026-08-02 15:00 UTC';
 
 let apiKey = localStorage.getItem('airtable-token');
 let baseId = localStorage.getItem('airtable-baseId');
@@ -52,6 +52,7 @@ class TaskManager {
             this.currentlyEditingTask = null;
             this.currentlyEditingParentTask = null;
             this.isDragging = false;
+            this._touchDrag = null;
             this._panelPendingTags = [];
             this._faviconCache = new Map();
             this.initializeQuillEditors();
@@ -243,6 +244,7 @@ class TaskManager {
 
             // Setup drag and drop
             this.setupDragAndDrop();
+            this.setupTouchDragAndDrop();
 
             // Add click outside handlers for panels
             document.getElementById('task-panel').addEventListener('click', (e) => {
@@ -510,20 +512,28 @@ class TaskManager {
                 e.preventDefault();
                 const draggable = document.querySelector('.dragging');
                 if (draggable && draggable.dataset.subtaskId && this.currentlyEditingTask) {
-                    // Update the subtasks array order based on the new DOM order
-                    const newSubtasksOrder = [];
-                    subtaskList.querySelectorAll('.task-item').forEach(element => {
-                        const subtask = this.currentlyEditingTask.subtasks.find(
-                            s => s.id === element.dataset.subtaskId
-                        );
-                        if (subtask) {
-                            newSubtasksOrder.push(subtask);
-                        }
-                    });
-                    this.currentlyEditingTask.subtasks = newSubtasksOrder;
-                    this.saveToDb();
+                    this.updateSubtaskOrder();
                 }
             });
+        }
+
+        // Rebuild this.currentlyEditingTask.subtasks from the current DOM order of
+        // .subtask-list .task-item elements and persist. Shared by the desktop
+        // subtask-list 'drop' handler and the touch drag-and-drop implementation.
+        updateSubtaskOrder() {
+            if (!this.currentlyEditingTask) return;
+            const subtaskList = document.querySelector('.subtask-list');
+            const newSubtasksOrder = [];
+            subtaskList.querySelectorAll('.task-item').forEach(element => {
+                const subtask = this.currentlyEditingTask.subtasks.find(
+                    s => s.id === element.dataset.subtaskId
+                );
+                if (subtask) {
+                    newSubtasksOrder.push(subtask);
+                }
+            });
+            this.currentlyEditingTask.subtasks = newSubtasksOrder;
+            this.saveToDb();
         }
 
         setupVersionBadge() {
@@ -768,6 +778,259 @@ class TaskManager {
             });
 
             this.setupUrlTooltip();
+        }
+
+        // Touch equivalent of setupDragAndDrop(). HTML5 native drag events never fire on
+        // touch input (Android/iOS), so this reimplements the same four flows —
+        // reorder, cross-column move, task-onto-task subtask conversion, and subtask
+        // reorder/promote — using touchstart/touchmove/touchend. It's entirely
+        // delegated at the document level, so no per-element wiring is needed and the
+        // desktop native-drag code above is untouched.
+        //
+        // A ~200ms long-press arms the drag; a quick swipe (finger moves before the
+        // timer fires) is left alone so native page/column scrolling still works.
+        // Once armed, the real .task-item is reordered live in the DOM (same mechanic
+        // as the desktop dragover handlers), and on release the same model methods used
+        // by desktop (moveTask, updateTaskOrder, moveTaskToSubtask,
+        // moveSubtaskToMainList, updateSubtaskOrder) are called to persist the result.
+        setupTouchDragAndDrop() {
+            const LONG_PRESS_MS = 200;
+            // Real touchscreens report a few px of jitter even when a finger is held
+            // still (far more than a mouse), so a tight threshold here was cancelling
+            // the long-press arm before it ever fired, leaving the raw touch to the
+            // browser's native long-press-to-select gesture instead.
+            const MOVE_CANCEL_PX = 18;
+            const EDGE_PX = 40;
+            const EDGE_SPEED_PX = 12;
+
+            const isInteractiveTouchTarget = (target) =>
+                !!target.closest('.task-checkbox, .tag-button, .tag-pill, .task-url-link');
+
+            const clearConversionHighlight = (state) => {
+                if (state.conversionTarget) {
+                    state.conversionTarget.style.boxShadow = '';
+                    state.conversionTarget = null;
+                }
+            };
+
+            const stopAutoScroll = (state) => {
+                if (state.autoScrollRaf) {
+                    cancelAnimationFrame(state.autoScrollRaf);
+                    state.autoScrollRaf = null;
+                }
+            };
+
+            const maybeAutoScroll = (state, container, y) => {
+                stopAutoScroll(state);
+                if (!container) return;
+                const rect = container.getBoundingClientRect();
+                let delta = 0;
+                if (y - rect.top < EDGE_PX) delta = -EDGE_SPEED_PX;
+                else if (rect.bottom - y < EDGE_PX) delta = EDGE_SPEED_PX;
+                if (!delta) return;
+                const step = () => {
+                    if (this._touchDrag !== state || !state.active) return;
+                    container.scrollTop += delta;
+                    state.autoScrollRaf = requestAnimationFrame(step);
+                };
+                state.autoScrollRaf = requestAnimationFrame(step);
+            };
+
+            // Arms the drag once the long-press fires: visually "picks up" the card and
+            // suppresses panel click-outside/close handlers for the duration, mirroring
+            // the desktop dragstart handlers above (.no-click / .dragging-subtask).
+            const activateDrag = (state) => {
+                state.active = true;
+                state.el.classList.add('dragging');
+                state.el.style.pointerEvents = 'none';
+                this.isDragging = true;
+                document.querySelectorAll('.task-panel').forEach(panel => panel.classList.add('no-click'));
+                if (state.kind === 'subtask') {
+                    // Reuse the existing CSS: pointer-events:none lets elementFromPoint
+                    // see through the panel to the columns underneath while promoting.
+                    document.getElementById('task-panel').classList.add('dragging-subtask');
+                }
+                if (navigator.vibrate) navigator.vibrate(10);
+            };
+
+            const cleanupDrag = (state) => {
+                stopAutoScroll(state);
+                state.el.classList.remove('dragging');
+                state.el.style.pointerEvents = '';
+                clearConversionHighlight(state);
+                setTimeout(() => {
+                    this.isDragging = false;
+                    document.querySelectorAll('.task-panel, .deleted-tasks-panel').forEach(panel => {
+                        panel.classList.remove('no-click');
+                        panel.classList.remove('dragging-subtask');
+                    });
+                }, 100);
+            };
+
+            document.addEventListener('touchstart', e => {
+                if (this._touchDrag || e.touches.length !== 1) return;
+                const item = e.target.closest('.task-item');
+                if (!item || isInteractiveTouchTarget(e.target)) return;
+
+                const touch = e.touches[0];
+                const isSubtask = !!item.dataset.subtaskId;
+
+                const state = {
+                    el: item,
+                    kind: isSubtask ? 'subtask' : 'task',
+                    sourceColumn: item.dataset.sourceColumn || null,
+                    parentTaskId: isSubtask && this.currentlyEditingTask ? this.currentlyEditingTask.id : null,
+                    active: false,
+                    startX: touch.clientX,
+                    startY: touch.clientY,
+                    lastX: touch.clientX,
+                    lastY: touch.clientY,
+                    conversionTarget: null,
+                    promoteList: null,
+                    timer: null,
+                    autoScrollRaf: null,
+                    moveRafScheduled: false,
+                };
+
+                state.timer = setTimeout(() => activateDrag(state), LONG_PRESS_MS);
+                this._touchDrag = state;
+            }, { passive: true });
+
+            // The reorder/hit-testing below forces a synchronous layout (elementFromPoint
+            // plus getBoundingClientRect on every sibling), and touch fires far more often
+            // than the display repaints — running it straight from every touchmove event
+            // queues up more layout work than the frame budget allows, so the reorder
+            // visibly lags behind the finger. Doing it at most once per animation frame
+            // (using the latest tracked point) keeps it in step with the finger instead.
+            const processDragMove = (state) => {
+                const x = state.lastX;
+                const y = state.lastY;
+
+                // state.el has pointer-events:none while dragging, so this reports
+                // whatever is visually underneath the dragged card/finger.
+                const underEl = document.elementFromPoint(x, y);
+
+                if (state.kind === 'task') {
+                    const list = underEl ? underEl.closest('.task-list') : null;
+                    if (list) {
+                        const afterElement = this.getDragAfterElement(list, y);
+                        if (afterElement) {
+                            list.insertBefore(state.el, afterElement);
+                        } else {
+                            list.appendChild(state.el);
+                        }
+                        maybeAutoScroll(state, list, y);
+                    }
+
+                    // Task-onto-task highlight, mirroring the desktop document-level
+                    // dragover handler (subtask-list targets are excluded).
+                    const hoveredTask = underEl ? underEl.closest('.task-item:not(.dragging)') : null;
+                    const validTarget = (hoveredTask && !hoveredTask.closest('.subtask-list')) ? hoveredTask : null;
+                    if (validTarget !== state.conversionTarget) {
+                        clearConversionHighlight(state);
+                        if (validTarget) {
+                            validTarget.style.boxShadow = '0 0 0 2px #ff6b2b';
+                            state.conversionTarget = validTarget;
+                        }
+                    }
+                } else {
+                    // Subtask: reorder while hovering the panel's subtask list;
+                    // otherwise track a promote-out target column underneath the panel.
+                    const subtaskList = document.querySelector('.subtask-list');
+                    const withinSubtaskList = subtaskList && (() => {
+                        const r = subtaskList.getBoundingClientRect();
+                        return y >= r.top && y <= r.bottom && x >= r.left && x <= r.right;
+                    })();
+
+                    if (withinSubtaskList) {
+                        state.promoteList = null;
+                        const afterElement = this.getDragAfterElement(subtaskList, y);
+                        if (afterElement) {
+                            subtaskList.insertBefore(state.el, afterElement);
+                        } else {
+                            subtaskList.appendChild(state.el);
+                        }
+                        maybeAutoScroll(state, subtaskList, y);
+                    } else {
+                        const list = underEl ? underEl.closest('.task-list') : null;
+                        state.promoteList = list || null;
+                    }
+                }
+            };
+
+            document.addEventListener('touchmove', e => {
+                const state = this._touchDrag;
+                if (!state) return;
+                const touch = e.touches[0];
+                if (!touch) return;
+
+                if (!state.active) {
+                    // Not armed yet — if the finger has moved, this is a scroll/swipe,
+                    // not a long-press. Bail out without preventDefault so native
+                    // scrolling proceeds untouched.
+                    const dx = touch.clientX - state.startX;
+                    const dy = touch.clientY - state.startY;
+                    if (Math.sqrt(dx * dx + dy * dy) > MOVE_CANCEL_PX) {
+                        clearTimeout(state.timer);
+                        this._touchDrag = null;
+                    }
+                    return;
+                }
+
+                // Armed: this is a drag, not a scroll — cancel the native scroll.
+                e.preventDefault();
+                state.lastX = touch.clientX;
+                state.lastY = touch.clientY;
+
+                if (!state.moveRafScheduled) {
+                    state.moveRafScheduled = true;
+                    requestAnimationFrame(() => {
+                        state.moveRafScheduled = false;
+                        if (this._touchDrag === state && state.active) processDragMove(state);
+                    });
+                }
+            }, { passive: false });
+
+            const finishTouch = () => {
+                const state = this._touchDrag;
+                if (!state) return;
+                clearTimeout(state.timer);
+                this._touchDrag = null;
+
+                if (!state.active) return; // plain tap — let the click event proceed normally
+
+                const conversionTarget = state.conversionTarget;
+                const promoteList = state.promoteList;
+                const el = state.el;
+                cleanupDrag(state);
+
+                if (state.kind === 'task') {
+                    if (conversionTarget && conversionTarget.dataset.taskId) {
+                        this.moveTaskToSubtask(el.dataset.taskId, state.sourceColumn, conversionTarget.dataset.taskId);
+                    } else {
+                        const column = el.closest('.task-column');
+                        const toColumnId = column ? column.id : state.sourceColumn;
+                        if (toColumnId && state.sourceColumn && toColumnId !== state.sourceColumn) {
+                            this.moveTask(el.dataset.taskId, state.sourceColumn, toColumnId);
+                        }
+                        if (toColumnId) this.updateTaskOrder(toColumnId);
+                    }
+                } else {
+                    if (promoteList) {
+                        const column = promoteList.closest('.task-column');
+                        const toColumnId = column ? column.id : null;
+                        if (toColumnId) {
+                            const afterElement = this.getDragAfterElement(promoteList, state.lastY);
+                            this.moveSubtaskToMainList(el.dataset.subtaskId, state.parentTaskId, toColumnId, afterElement);
+                        }
+                    } else {
+                        this.updateSubtaskOrder();
+                    }
+                }
+            };
+
+            document.addEventListener('touchend', finishTouch);
+            document.addEventListener('touchcancel', finishTouch);
         }
 
         updateTaskOrder(columnId) {
