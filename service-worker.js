@@ -1,5 +1,5 @@
 // service-worker.js
-const CACHE_NAME = 'sunday-app-cache-v6';
+const CACHE_NAME = 'sunday-app-cache-v7';
 const ASSETS_TO_CACHE = [
   '/sunday/',
   '/sunday/index.html',
@@ -14,6 +14,7 @@ const ASSETS_TO_CACHE = [
   '/sunday/icons/icon-192.png',
   '/sunday/icons/icon-512.png',
   '/sunday/icons/icon-maskable-512.png',
+  '/sunday/icons/icon-monochrome.svg',
   '/sunday/icons/apple-touch-icon.png',
   '/sunday/vendor/playpen-sans/playpen-sans.css',
   '/sunday/vendor/playpen-sans/playpen-sans-latin-400.woff2',

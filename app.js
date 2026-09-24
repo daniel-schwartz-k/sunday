@@ -1,5 +1,5 @@
 // Dev version stamp — updated on every code change (format: YYYY-MM-DD HH:MM)
-const APP_VERSION = '2026-09-24 18:59 UTC';
+const APP_VERSION = '2026-09-25 09:05 UTC';
 
 let apiKey = localStorage.getItem('airtable-token');
 let baseId = localStorage.getItem('airtable-baseId');
@@ -1140,11 +1140,15 @@ class TaskManager {
 
             taskElement.querySelector('.task-checkbox').addEventListener('change', (e) => {
                 if (e.target.checked) {
+                    const siblingToFocus = taskElement.nextElementSibling || taskElement.previousElementSibling;
                     taskElement.classList.add('completing');
                     // Wait for animation to complete before removing
                     setTimeout(() => {
                         task.completed = true;
                         this.deleteTask(task, columnId);
+                        if (siblingToFocus) {
+                            siblingToFocus.focus({ preventScroll: true });
+                        }
                     }, 500); // Match the animation duration from CSS
                 }
             });
@@ -1162,7 +1166,14 @@ class TaskManager {
 
             // Add keyboard event listener for opening task panel
             taskElement.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' && !e.target.classList.contains('task-checkbox')) {
+                if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && !e.target.classList.contains('task-checkbox')) {
+                    e.preventDefault();
+                    const checkbox = taskElement.querySelector('.task-checkbox');
+                    if (!checkbox.checked) {
+                        checkbox.checked = true;
+                        checkbox.dispatchEvent(new Event('change'));
+                    }
+                } else if (e.key === 'Enter' && !e.target.classList.contains('task-checkbox')) {
                     this.openTaskPanel(task);
                 }
             });
