@@ -8,5 +8,6 @@
     android:resizeMode="horizontal|vertical"
     android:widgetCategory="home_screen"
     android:initialLayout="@layout/widget_root"
+    android:previewLayout="@layout/widget_root"
     android:description="@string/widget_description">
 </appwidget-provider>
