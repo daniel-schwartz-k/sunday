@@ -7,11 +7,17 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.res.ColorStateList;
 import android.net.Uri;
+import android.os.Build;
+import android.view.View;
 import android.widget.RemoteViews;
+import android.widget.Toast;
 import org.json.JSONObject;
 
 public class SundayWidgetProvider extends AppWidgetProvider {
+
+    public static final String ACTION_SYNC_DISABLED = "com.schwartzinc.sunday.SYNC_DISABLED";
 
     public static void refreshAll(Context context) {
         AppWidgetManager manager = AppWidgetManager.getInstance(context);
@@ -26,6 +32,15 @@ public class SundayWidgetProvider extends AppWidgetProvider {
     }
 
     @Override
+    public void onReceive(Context context, Intent intent) {
+        if (intent != null && ACTION_SYNC_DISABLED.equals(intent.getAction())) {
+            Toast.makeText(context, "Sync is only available in AirTable mode", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        super.onReceive(context, intent);
+    }
+
+    @Override
     public void onUpdate(Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds) {
         for (int appWidgetId : appWidgetIds) {
             updateWidget(context, appWidgetManager, appWidgetId);
@@ -37,19 +52,70 @@ public class SundayWidgetProvider extends AppWidgetProvider {
         SharedPreferences prefs = context.getSharedPreferences(WidgetBridgePlugin.PREFS_NAME, Context.MODE_PRIVATE);
         String snapshotStr = prefs.getString(WidgetBridgePlugin.KEY_SNAPSHOT, null);
         String themeName = "dark";
+        boolean syncEnabled = false;
         if (snapshotStr != null) {
             try {
                 JSONObject snapshot = new JSONObject(snapshotStr);
                 themeName = snapshot.optString("theme", "dark");
+                syncEnabled = snapshot.optBoolean("syncEnabled", false);
             } catch (Exception ignored) {}
         }
         WidgetTheme theme = WidgetTheme.get(themeName);
+
+        long syncingSince = prefs.getLong(WidgetBridgePlugin.KEY_SYNCING_SINCE, 0L);
+        boolean isSyncing = syncingSince > 0 && (System.currentTimeMillis() - syncingSince < 60_000L);
 
         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget_root);
 
         // Apply theme colors to root & header
         views.setTextColor(R.id.widget_header_title, theme.textPrimary);
         views.setTextColor(R.id.widget_empty_text, theme.textSecondary);
+
+        // Configure sync button / spinner
+        if (isSyncing) {
+            views.setViewVisibility(R.id.widget_sync_btn, View.GONE);
+            views.setViewVisibility(R.id.widget_sync_progress, View.VISIBLE);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                views.setColorStateList(
+                    R.id.widget_sync_progress,
+                    "setIndeterminateTintList",
+                    ColorStateList.valueOf(theme.accent)
+                );
+            }
+            // Clear click handler during sync so repeated taps are ignored
+            views.setOnClickPendingIntent(R.id.widget_sync_area, null);
+        } else {
+            views.setViewVisibility(R.id.widget_sync_progress, View.GONE);
+            views.setViewVisibility(R.id.widget_sync_btn, View.VISIBLE);
+
+            if (syncEnabled) {
+                views.setTextColor(R.id.widget_sync_btn, theme.accent);
+
+                Intent syncIntent = new Intent(context, MainActivity.class);
+                syncIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                syncIntent.putExtra("widgetAction", "sync");
+                PendingIntent syncPending = PendingIntent.getActivity(
+                    context,
+                    1,
+                    syncIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+                );
+                views.setOnClickPendingIntent(R.id.widget_sync_area, syncPending);
+            } else {
+                int disabledColor = (theme.textSecondary & 0x00FFFFFF) | 0x66000000;
+                views.setTextColor(R.id.widget_sync_btn, disabledColor);
+
+                Intent disabledIntent = new Intent(context, SundayWidgetProvider.class);
+                disabledIntent.setAction(ACTION_SYNC_DISABLED);
+                PendingIntent disabledPending = PendingIntent.getBroadcast(
+                    context,
+                    2,
+                    disabledIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+                );
+                views.setOnClickPendingIntent(R.id.widget_sync_area, disabledPending);
+            }
+        }
 
         // Header click: open the main app
         Intent openAppIntent = new Intent(context, MainActivity.class);

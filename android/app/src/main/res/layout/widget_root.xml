@@ -45,6 +45,32 @@
                 android:text="@string/app_name"
                 android:textSize="15sp"
                 android:textStyle="bold" />
+
+            <!-- Sync button / spinner area -->
+            <FrameLayout
+                android:id="@+id/widget_sync_area"
+                android:layout_width="32dp"
+                android:layout_height="28dp">
+
+                <TextView
+                    android:id="@+id/widget_sync_btn"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:text="⇅"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:contentDescription="Sync" />
+
+                <ProgressBar
+                    android:id="@+id/widget_sync_progress"
+                    style="?android:attr/progressBarStyleSmall"
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
+                    android:layout_gravity="center"
+                    android:indeterminate="true"
+                    android:visibility="gone" />
+            </FrameLayout>
         </LinearLayout>
 
         <!-- Divider line (ImageView with static shape drawable, 100% RemoteViews safe) -->

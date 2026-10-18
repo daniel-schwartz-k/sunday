@@ -1,5 +1,5 @@
 // Dev version stamp — updated on every code change (format: YYYY-MM-DD HH:MM)
-const APP_VERSION = '2026-10-18 20:30 UTC';
+const APP_VERSION = '2026-10-18 23:25 UTC';
 
 // GitHub repository for in-app APK update checks (owner/repo)
 const GITHUB_REPO = 'daniel-schwartz-k/sunday';
@@ -1633,7 +1633,7 @@ class TaskManager {
         }
 
         async syncWithAirtable() {
-            if (localStorage.getItem('persistMode') !== 'AirTable') return;
+            if (localStorage.getItem('persistMode') !== 'AirTable') return false;
             const DEFAULT_DATA = {
                 lists: {
                     'on-it':    { type: 'on-it',    tasks: [] },
@@ -1644,6 +1644,7 @@ class TaskManager {
                 tags: {}
             };
             this.showLoading('Syncing...');
+            this.setWidgetSyncing(true);
             try {
                 const airtableData = await this.loadFromAirtable();
                 const localRaw = localStorage.getItem('todo-app-data');
@@ -1720,10 +1721,15 @@ class TaskManager {
                 });
 
                 this.renderAllTasks();
+                this.syncWidget();
                 this.hideLoading();
+                return true;
             } catch (err) {
                 console.error('Failed to sync with Airtable:', err);
                 this.showError('Sync failed — check your connection and try again');
+                return false;
+            } finally {
+                this.setWidgetSyncing(false);
             }
         }
 
@@ -2287,6 +2293,17 @@ class TaskManager {
             this.syncWidget();
         }
 
+        setWidgetSyncing(flag) {
+            if (!isNativeApp() || !this.widgetBridge) return;
+            try {
+                this.widgetBridge.setSyncing({ syncing: !!flag }).catch(err => {
+                    console.error('WidgetBridge.setSyncing rejected:', err);
+                });
+            } catch (err) {
+                console.error('Failed to set widget syncing state:', err);
+            }
+        }
+
         syncWidget() {
             if (!isNativeApp() || !this.widgetBridge) return;
             try {
@@ -2306,6 +2323,7 @@ class TaskManager {
                 const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
                 const snapshot = {
                     theme: currentTheme,
+                    syncEnabled: localStorage.getItem('persistMode') === 'AirTable',
                     tags: this.globalTags || {},
                     lists: listsSnapshot,
                     updatedAt: new Date().toISOString()
@@ -2332,6 +2350,12 @@ class TaskManager {
                 if (found) {
                     this.openTaskPanel(found.task, found.columnId);
                 }
+            } else if (action === 'sync') {
+                this.syncWithAirtable().then(ok => {
+                    if (ok && isNativeApp() && this.widgetBridge) {
+                        this.widgetBridge.closeApp().catch(() => {});
+                    }
+                });
             }
         }
 

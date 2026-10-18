@@ -13,6 +13,7 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 public class WidgetBridgePlugin extends Plugin {
     public static final String PREFS_NAME = "sunday_widget";
     public static final String KEY_SNAPSHOT = "snapshot";
+    public static final String KEY_SYNCING_SINCE = "syncing_since";
 
     @Override
     public void load() {
@@ -59,5 +60,27 @@ public class WidgetBridgePlugin extends Plugin {
 
         SundayWidgetProvider.refreshAll(ctx);
         call.resolve();
+    }
+
+    @PluginMethod
+    public void setSyncing(PluginCall call) {
+        boolean syncing = Boolean.TRUE.equals(call.getBoolean("syncing"));
+        Context ctx = getContext();
+        SharedPreferences prefs = ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        if (syncing) {
+            prefs.edit().putLong(KEY_SYNCING_SINCE, System.currentTimeMillis()).apply();
+        } else {
+            prefs.edit().remove(KEY_SYNCING_SINCE).apply();
+        }
+        SundayWidgetProvider.refreshAll(ctx);
+        call.resolve();
+    }
+
+    @PluginMethod
+    public void closeApp(PluginCall call) {
+        call.resolve();
+        getActivity().runOnUiThread(() -> {
+            getActivity().finishAndRemoveTask();
+        });
     }
 }
