@@ -34,8 +34,9 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+      # Note: GitHub Actions ubuntu-latest runners already have ANDROID_HOME and
+      # pre-installed Android SDK build-tools, platforms, and cmdline-tools.
+      # Gradle automatically manages and downloads any missing SDK components.
 
       - name: Install dependencies
         run: npm ci

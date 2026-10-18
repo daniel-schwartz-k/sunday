@@ -1,5 +1,5 @@
 // Dev version stamp — updated on every code change (format: YYYY-MM-DD HH:MM)
-const APP_VERSION = '2026-10-18 12:00 UTC';
+const APP_VERSION = '2026-10-18 13:00 UTC';
 
 let apiKey = localStorage.getItem('airtable-token');
 let baseId = localStorage.getItem('airtable-baseId');
@@ -558,8 +558,21 @@ class TaskManager {
                 }
             });
 
+            // In native Android (Capacitor), assets are bundled in the APK (no SW cache to clear).
+            // Instead, the button acts as an APK update checker that queries GitHub Releases.
+            const isNative = !!(window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform());
+            if (isNative) {
+                clearCacheBtn.textContent = '⇣ Update APK';
+                clearCacheBtn.title = 'Check for APK updates on GitHub';
+                clearCacheBtn.classList.add('update-apk-btn');
+            }
+
             clearCacheBtn.addEventListener('click', async (e) => {
                 e.stopPropagation();
+                if (isNative) {
+                    await this.checkForApkUpdate(clearCacheBtn);
+                    return;
+                }
                 if (!confirm('Clear service worker cache? The page will reload with a fresh version.')) return;
                 if ('caches' in window) {
                     const keys = await caches.keys();
@@ -581,6 +594,53 @@ class TaskManager {
                 localStorage.removeItem('airtable-tableName');
                 location.reload();
             });
+        }
+
+        async checkForApkUpdate(button) {
+            const originalText = button ? button.textContent : '';
+            if (button) {
+                button.textContent = 'Checking...';
+                button.disabled = true;
+            }
+
+            try {
+                const res = await fetch('https://api.github.com/repos/daniel-schwartz-k/sunday/releases/latest', {
+                    headers: { 'Accept': 'application/vnd.github.v3+json' }
+                });
+
+                if (!res.ok) {
+                    if (res.status === 404) {
+                        alert('No releases found yet on GitHub. Create a tagged release (e.g. v1.0.0) first!');
+                    } else {
+                        alert(`Could not check for updates (GitHub API status: ${res.status}).`);
+                    }
+                    return;
+                }
+
+                const release = await res.json();
+                const latestTag = release.tag_name || '';
+                const cleanTag = latestTag.replace(/^v/, '');
+
+                // Find attached APK asset
+                const apkAsset = Array.isArray(release.assets) && release.assets.find(a =>
+                    a.name && a.name.endsWith('.apk')
+                );
+
+                const downloadUrl = apkAsset ? apkAsset.browser_download_url : (release.html_url || 'https://github.com/daniel-schwartz-k/sunday/releases');
+
+                const msg = `Latest release: ${latestTag || 'latest'}\nCurrent build stamp: ${APP_VERSION}\n\nWould you like to download the latest APK now?`;
+                if (confirm(msg)) {
+                    window.open(downloadUrl, '_blank');
+                }
+            } catch (err) {
+                console.error('Update check failed:', err);
+                alert('Could not check for updates. Check your internet connection.');
+            } finally {
+                if (button) {
+                    button.textContent = originalText;
+                    button.disabled = false;
+                }
+            }
         }
 
         setupDragAndDrop() {
