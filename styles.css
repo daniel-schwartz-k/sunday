@@ -215,7 +215,7 @@ body {
 .page-wrapper {
     width: 100%;
     max-width: 1200px;
-    padding: 40px 40px;
+    padding: calc(40px + env(safe-area-inset-top, 0px)) calc(40px + env(safe-area-inset-right, 0px)) calc(40px + env(safe-area-inset-bottom, 0px)) calc(40px + env(safe-area-inset-left, 0px));
     margin: 0 auto;
     min-height: 100vh;
     display: flex;
@@ -1760,4 +1760,14 @@ body.keyboard-navigating .task-item:hover:not(:focus) {
 
 .version-badge .reconfigure-btn:hover {
     background: #0d47a1;
+}
+
+/* Safe area insets for mobile edge-to-edge screens */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+    .bottom-actions {
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
+    .panel-content {
+        max-height: calc(90vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+    }
 }

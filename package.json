@@ -1,0 +1,19 @@
+{
+  "name": "sunday",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Minimal, offline-capable task manager with PWA and native Android builds",
+  "scripts": {
+    "build:web": "node scripts/build-web.mjs",
+    "cap:sync": "npm run build:web && cap sync android",
+    "cap:copy": "npm run build:web && cap copy android",
+    "cap:open": "cap open android",
+    "assets:generate": "capacitor-assets generate --android"
+  },
+  "devDependencies": {
+    "@capacitor/android": "^7.0.1",
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "^7.0.1",
+    "@capacitor/core": "^7.0.1"
+  }
+}

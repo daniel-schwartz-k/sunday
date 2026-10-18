@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Sunday</title>
     <base href="/sunday/">
     <script>
@@ -143,7 +143,10 @@
     <script src="models/taskList.js"></script>
     <script src="app.js"></script>
         <script>
-            if ('serviceWorker' in navigator) {
+            // Register service worker for PWA installs only; skip inside Capacitor native runtime
+            // where assets are already bundled locally and Capacitor is loaded from https://localhost.
+            var isNative = !!(window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform());
+            if (!isNative && 'serviceWorker' in navigator) {
                 window.addEventListener('load', function() {
                     navigator.serviceWorker.register('service-worker.js');
                 });

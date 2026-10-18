@@ -1,0 +1,12 @@
+{
+  "appId": "com.schwartzinc.sunday",
+  "appName": "Sunday",
+  "webDir": "www",
+  "backgroundColor": "#1e2126",
+  "android": {
+    "adjustMarginsForEdgeToEdge": "auto"
+  },
+  "server": {
+    "androidScheme": "https"
+  }
+}

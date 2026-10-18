@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Running the App
 
-This is a static web app — no build step. Open `index.html` directly in a browser, or serve with any static file server:
+This is a static web app — no build step for web. Open `index.html` directly in a browser, or serve with any static file server:
 
 ```bash
 python3 -m http.server 8080
@@ -13,11 +13,21 @@ python3 -m http.server 8080
 
 The `<base href="/sunday/">` tag is automatically neutralized for localhost by an inline script in `index.html`, so local dev works without path adjustments.
 
-There are no tests, no linter, and no package.json.
+GitHub Pages serves the static web app and PWA directly from the repo root.
+
+## Native Android Build (Capacitor)
+
+The repository also includes an official native Android build wrapped with Capacitor.
+
+- `package.json`: provides Capacitor CLI and Android platform tooling
+- `capacitor.config.json`: configuration with `appId: com.schwartzinc.sunday`, `webDir: www`, `androidScheme: https`
+- `scripts/build-web.mjs`: packages required web assets into `www/` (whitelist: `index.html`, `app.js`, `styles.css`, `manifest.webmanifest`, `service-worker.js`, `models/`, `vendor/`, `icons/`, `banners/`). **When adding new top-level web assets or directories, add them to `scripts/build-web.mjs` as well as `service-worker.js`!**
+- `npm run cap:sync`: runs `build-web.mjs` and synchronizes assets to `android/`
+- `.github/workflows/android.yml`: automated GitHub Actions workflow that compiles APKs on push and attaches release APKs to tagged releases
 
 ## Architecture
 
-Single-page vanilla JS app. All logic lives in one `TaskManager` class in `app.js` (~1660 lines). No framework, no bundler, no npm.
+Single-page vanilla JS app. All logic lives in one `TaskManager` class in `app.js`. No framework, no bundler.
 
 **Data flow:**
 - On load: `initPersistMode()` (top of `app.js`) prompts once for storage choice, then `TaskManager` constructor calls `loadFromDb()` → populates `this.lists`
@@ -53,7 +63,7 @@ Single-page vanilla JS app. All logic lives in one `TaskManager` class in `app.j
 
 **Quill editors:** two instances (`this.taskQuill`, `this.subtaskQuill`) initialized in constructor with syntax highlighting via highlight.js. Supported code block languages: `plaintext`, `bash`, `diff`, `json`, `xml`, `yaml`, `typescript`.
 
-**Service worker** (`service-worker.js`): caches all static assets under `CACHE_NAME = 'sunday-app-cache-v2'`. When adding new vendor files, add them to `ASSETS_TO_CACHE`. The cache name must be bumped to invalidate old caches.
+**Service worker** (`service-worker.js`): caches all static assets under `CACHE_NAME = 'sunday-app-cache-v8'`. When adding new vendor files, add them to `ASSETS_TO_CACHE`. The cache name must be bumped to invalidate old caches. Inside native Android Capacitor runtime, service worker registration is bypassed.
 
 ## Version Stamp
 
