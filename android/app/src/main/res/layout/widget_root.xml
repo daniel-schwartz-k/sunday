@@ -31,10 +31,10 @@
 
             <ImageView
                 android:id="@+id/widget_header_logo"
-                android:layout_width="18dp"
-                android:layout_height="18dp"
+                android:layout_width="22dp"
+                android:layout_height="22dp"
                 android:src="@drawable/ic_sunday_logo"
-                android:layout_marginEnd="6dp"
+                android:layout_marginEnd="8dp"
                 android:contentDescription="@null" />
 
             <TextView
@@ -43,14 +43,14 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:text="@string/app_name"
-                android:textSize="15sp"
+                android:textSize="17sp"
                 android:textStyle="bold" />
 
             <!-- Sync button / spinner area -->
             <FrameLayout
                 android:id="@+id/widget_sync_area"
-                android:layout_width="32dp"
-                android:layout_height="28dp">
+                android:layout_width="34dp"
+                android:layout_height="30dp">
 
                 <TextView
                     android:id="@+id/widget_sync_btn"
@@ -58,15 +58,15 @@
                     android:layout_height="match_parent"
                     android:gravity="center"
                     android:text="⇅"
-                    android:textSize="18sp"
+                    android:textSize="21sp"
                     android:textStyle="bold"
                     android:contentDescription="Sync" />
 
                 <ProgressBar
                     android:id="@+id/widget_sync_progress"
                     style="?android:attr/progressBarStyleSmall"
-                    android:layout_width="18dp"
-                    android:layout_height="18dp"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
                     android:layout_gravity="center"
                     android:indeterminate="true"
                     android:visibility="gone" />
