@@ -207,8 +207,7 @@ public class SundayWidgetService extends RemoteViewsService {
         private RemoteViews buildTaskRow(RowItem item) {
             RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget_row_task);
 
-            // Card background & text colors
-            views.setInt(R.id.task_card_bg, "setColorFilter", theme.cardBg);
+            // Card title and text color
             views.setTextViewText(R.id.task_title, item.taskName);
             views.setTextColor(R.id.task_title, theme.textPrimary);
 
@@ -231,9 +230,8 @@ public class SundayWidgetService extends RemoteViewsService {
                 if (i < displayedTags) {
                     TagInfo t = item.tags.get(i);
                     views.setViewVisibility(pillId, View.VISIBLE);
-                    views.setTextViewText(pillId, t.name);
-                    views.setTextColor(pillId, Color.WHITE);
-                    views.setInt(pillId, "setBackgroundColor", t.color);
+                    views.setTextViewText(pillId, "#" + t.name);
+                    views.setTextColor(pillId, t.color);
                 } else {
                     views.setViewVisibility(pillId, View.GONE);
                 }
