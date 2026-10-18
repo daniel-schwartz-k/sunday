@@ -1,5 +1,8 @@
 // Dev version stamp — updated on every code change (format: YYYY-MM-DD HH:MM)
-const APP_VERSION = '2026-10-18 14:15 UTC';
+const APP_VERSION = '2026-10-18 20:30 UTC';
+
+// GitHub repository for in-app APK update checks (owner/repo)
+const GITHUB_REPO = 'daniel-schwartz-k/sunday';
 
 function isNativeApp() {
     return !!(window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform());
@@ -609,8 +612,9 @@ class TaskManager {
             }
 
             try {
-                const res = await fetch('https://api.github.com/repos/daniel-schwartz-k/sunday/releases/latest', {
-                    headers: { 'Accept': 'application/vnd.github.v3+json' }
+                const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/releases/latest?_=${Date.now()}`, {
+                    headers: { 'Accept': 'application/vnd.github.v3+json' },
+                    cache: 'no-store'
                 });
 
                 if (!res.ok) {
@@ -624,14 +628,13 @@ class TaskManager {
 
                 const release = await res.json();
                 const latestTag = release.tag_name || '';
-                const cleanTag = latestTag.replace(/^v/, '');
 
                 // Find attached APK asset
                 const apkAsset = Array.isArray(release.assets) && release.assets.find(a =>
                     a.name && a.name.endsWith('.apk')
                 );
 
-                const downloadUrl = apkAsset ? apkAsset.browser_download_url : (release.html_url || 'https://github.com/daniel-schwartz-k/sunday/releases');
+                const downloadUrl = apkAsset ? apkAsset.browser_download_url : (release.html_url || `https://github.com/${GITHUB_REPO}/releases`);
 
                 const msg = `Latest release: ${latestTag || 'latest'}\nCurrent build stamp: ${APP_VERSION}\n\nWould you like to download the latest APK now?`;
                 if (confirm(msg)) {
