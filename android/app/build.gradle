@@ -13,6 +13,10 @@ def computeVersionName() {
     if (refName) {
         return refName.startsWith('v') ? refName.substring(1) : refName
     }
+    def runNumber = System.getenv("GITHUB_RUN_NUMBER")
+    if (runNumber) {
+        return "1.0.${runNumber}"
+    }
     return "1.0.0"
 }
 
