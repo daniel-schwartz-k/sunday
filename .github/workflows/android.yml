@@ -3,6 +3,13 @@ name: Android Build
 on:
   push:
     branches: [ main ]
+    paths-ignore:
+      - 'README.md'
+      - 'CLAUDE.md'
+      - '.claude/**'
+      - '.serena/**'
+      - '.vscode/**'
+      - 'LICENSE'
   workflow_dispatch:
 
 concurrency:

@@ -2,7 +2,7 @@
 
 A minimal, offline-capable task manager. No build step for web — just open `index.html` or install as a PWA. Also available as a native Android app wrapper (Capacitor) with future Android home-screen widget support.
 
-**[Live Demo / PWA](https://danielschwartz85.github.io/sunday)**
+**[Live Demo / PWA](https://danielschwartz85.github.io/sunday)** · **[Download Latest Android APK](https://github.com/daniel-schwartz-k/sunday/releases/latest)**
 
 ## Quick Start (Web / PWA)
 
