@@ -51,7 +51,7 @@ jobs:
         run: |
           if [ -n "$KEYSTORE_BASE64" ]; then
             echo "Keystore secret present, decoding to $RUNNER_TEMP/release.jks"
-            echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+            python3 -c "import base64, os; data = os.environ['KEYSTORE_BASE64']; open('$RUNNER_TEMP/release.jks', 'wb').write(base64.b64decode(data))"
             echo "has_keystore=true" >> "$GITHUB_OUTPUT"
             echo "keystore_path=$RUNNER_TEMP/release.jks" >> "$GITHUB_OUTPUT"
           else
