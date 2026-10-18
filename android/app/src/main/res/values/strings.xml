@@ -4,4 +4,6 @@
     <string name="title_activity_main">Sunday</string>
     <string name="package_name">com.schwartzinc.sunday</string>
     <string name="custom_url_scheme">com.schwartzinc.sunday</string>
+    <string name="widget_name">Sunday Tasks</string>
+    <string name="widget_description">Shows your Sunday tasks across On It, Next Up, and Back Log.</string>
 </resources>

@@ -33,6 +33,25 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths"></meta-data>
         </provider>
+
+        <!-- Home-screen widget receiver -->
+        <receiver
+            android:name=".SundayWidgetProvider"
+            android:label="@string/widget_name"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/sunday_widget_info" />
+        </receiver>
+
+        <!-- RemoteViewsService supplying ListView rows -->
+        <service
+            android:name=".SundayWidgetService"
+            android:permission="android.permission.BIND_REMOTEVIEWS"
+            android:exported="false" />
     </application>
 
     <!-- Permissions -->

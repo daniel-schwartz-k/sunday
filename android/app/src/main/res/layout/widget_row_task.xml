@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/task_row_root"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:paddingStart="2dp"
+    android:paddingEnd="2dp"
+    android:paddingTop="3dp"
+    android:paddingBottom="3dp">
+
+    <!-- Card background tinted dynamically -->
+    <ImageView
+        android:id="@+id/task_card_bg"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:src="@drawable/task_card_bg"
+        android:scaleType="fitXY"
+        android:contentDescription="@null" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="8dp">
+
+        <!-- Task title, max 2 lines, wrapped with ellipsis -->
+        <TextView
+            android:id="@+id/task_title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:maxLines="2"
+            android:ellipsize="end"
+            android:textSize="13sp"
+            android:textStyle="bold" />
+
+        <!-- Meta row: subtask badge + up to 3 tags + '+N' overflow -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingTop="4dp">
+
+            <!-- Subtask count badge -->
+            <TextView
+                android:id="@+id/task_subtask_badge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="10sp"
+                android:textStyle="bold"
+                android:layout_marginEnd="6dp"
+                android:visibility="gone" />
+
+            <!-- Tag pill 1 -->
+            <TextView
+                android:id="@+id/task_tag_1"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:paddingStart="6dp"
+                android:paddingEnd="6dp"
+                android:paddingTop="1dp"
+                android:paddingBottom="1dp"
+                android:layout_marginEnd="4dp"
+                android:textSize="9sp"
+                android:visibility="gone" />
+
+            <!-- Tag pill 2 -->
+            <TextView
+                android:id="@+id/task_tag_2"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:paddingStart="6dp"
+                android:paddingEnd="6dp"
+                android:paddingTop="1dp"
+                android:paddingBottom="1dp"
+                android:layout_marginEnd="4dp"
+                android:textSize="9sp"
+                android:visibility="gone" />
+
+            <!-- Tag pill 3 -->
+            <TextView
+                android:id="@+id/task_tag_3"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:paddingStart="6dp"
+                android:paddingEnd="6dp"
+                android:paddingTop="1dp"
+                android:paddingBottom="1dp"
+                android:layout_marginEnd="4dp"
+                android:textSize="9sp"
+                android:visibility="gone" />
+
+            <!-- +N overflow badge -->
+            <TextView
+                android:id="@+id/task_tag_more"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="9sp"
+                android:textStyle="bold"
+                android:visibility="gone" />
+        </LinearLayout>
+    </LinearLayout>
+</FrameLayout>

@@ -1,5 +1,9 @@
 // Dev version stamp — updated on every code change (format: YYYY-MM-DD HH:MM)
-const APP_VERSION = '2026-10-18 13:45 UTC';
+const APP_VERSION = '2026-10-18 14:15 UTC';
+
+function isNativeApp() {
+    return !!(window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform());
+}
 
 let apiKey = localStorage.getItem('airtable-token');
 let baseId = localStorage.getItem('airtable-baseId');
@@ -58,6 +62,7 @@ class TaskManager {
             this.loadFromDb();
             this.setupEventListeners();
             this.setupVersionBadge();
+            this.initWidgetBridge();
             this.focusFirstTask();
         }
 
@@ -560,7 +565,7 @@ class TaskManager {
 
             // In native Android (Capacitor), assets are bundled in the APK (no SW cache to clear).
             // Instead, the button acts as an APK update checker that queries GitHub Releases.
-            const isNative = !!(window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform());
+            const isNative = isNativeApp();
             if (isNative) {
                 clearCacheBtn.textContent = '⇣ Update APK';
                 clearCacheBtn.title = 'Check for APK updates on GitHub';
@@ -1545,6 +1550,7 @@ class TaskManager {
                 updatedAt: new Date().toISOString()
             };
             localStorage.setItem('todo-app-data', JSON.stringify(data));
+            this.syncWidget();
         }
 
         loadFromDb() {
@@ -2255,6 +2261,100 @@ class TaskManager {
             document.getElementById('url-preview-tooltip')?.remove();
         }
 
+        // --- Widget Bridge (Android native home-screen widget) ---
+
+        initWidgetBridge() {
+            if (!isNativeApp()) return;
+            const plugins = window.Capacitor?.Plugins;
+            this.widgetBridge = plugins?.WidgetBridge;
+            if (!this.widgetBridge) return;
+
+            try {
+                this.widgetBridge.addListener('widgetAction', (data) => {
+                    this.handleWidgetAction(data);
+                });
+            } catch (err) {
+                console.error('Failed to register widgetAction listener:', err);
+            }
+
+            window.addEventListener('themechange', () => {
+                this.syncWidget();
+            });
+
+            this.syncWidget();
+        }
+
+        syncWidget() {
+            if (!isNativeApp() || !this.widgetBridge) return;
+            try {
+                const columnOrder = ['on-it', 'next-up', 'back-log'];
+                const listsSnapshot = {};
+                for (const col of columnOrder) {
+                    const list = this.lists[col];
+                    const tasks = list && Array.isArray(list.tasks) ? list.tasks : [];
+                    listsSnapshot[col] = tasks.map(t => ({
+                        id: String(t.id),
+                        name: t.name || 'Untitled task',
+                        tags: Array.isArray(t.tags) ? t.tags : [],
+                        subtaskCount: Array.isArray(t.subtasks) ? t.subtasks.length : 0
+                    }));
+                }
+
+                const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+                const snapshot = {
+                    theme: currentTheme,
+                    tags: this.globalTags || {},
+                    lists: listsSnapshot,
+                    updatedAt: new Date().toISOString()
+                };
+
+                this.widgetBridge.update({ snapshot: JSON.stringify(snapshot) }).catch(err => {
+                    console.error('WidgetBridge.update rejected:', err);
+                });
+            } catch (err) {
+                console.error('Failed to sync widget:', err);
+            }
+        }
+
+        handleWidgetAction(data) {
+            if (!data) return;
+            const action = data.widgetAction;
+            const columnId = data.columnId || 'on-it';
+            const taskId = data.taskId;
+
+            if (action === 'addTask') {
+                this.openTaskPanel(null, columnId);
+            } else if (action === 'openTask' && taskId) {
+                const found = this.findTaskById(taskId);
+                if (found) {
+                    this.openTaskPanel(found.task, found.columnId);
+                }
+            }
+        }
+
+        findTaskById(taskId) {
+            const targetId = String(taskId);
+            const columnOrder = ['on-it', 'next-up', 'back-log'];
+            for (const col of columnOrder) {
+                const list = this.lists[col];
+                if (!list || !Array.isArray(list.tasks)) continue;
+                for (const task of list.tasks) {
+                    if (String(task.id) === targetId) {
+                        return { task, columnId: col };
+                    }
+                    if (Array.isArray(task.subtasks)) {
+                        for (const sub of task.subtasks) {
+                            if (String(sub.id) === targetId) {
+                                // Open parent task since panel only hosts top-level tasks
+                                return { task, columnId: col };
+                            }
+                        }
+                    }
+                }
+            }
+            return null;
+        }
+
     }
 
     const ThemeManager = {
@@ -2297,6 +2397,7 @@ class TaskManager {
             this.updateBanner(theme);
             this.updateFavicon(theme);
             this.updateHighlightTheme(theme);
+            window.dispatchEvent(new CustomEvent('themechange', { detail: { theme } }));
         },
 
         updateBanner(theme) {
