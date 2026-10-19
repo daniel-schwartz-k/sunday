@@ -207,7 +207,8 @@ public class SundayWidgetService extends RemoteViewsService {
         private RemoteViews buildTaskRow(RowItem item) {
             RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget_row_task);
 
-            // Card title and text color
+            // Card background & text colors
+            views.setInt(R.id.task_card_bg, "setColorFilter", theme.cardBg);
             views.setTextViewText(R.id.task_title, item.taskName);
             views.setTextColor(R.id.task_title, theme.textPrimary);
 

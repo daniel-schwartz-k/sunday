@@ -67,7 +67,9 @@ public class SundayWidgetProvider extends AppWidgetProvider {
 
         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget_root);
 
-        // Apply theme colors to root & header
+        // Apply theme colors to root, background, divider & header
+        views.setInt(R.id.widget_bg_image, "setColorFilter", theme.bg);
+        views.setInt(R.id.widget_header_divider, "setColorFilter", theme.border);
         views.setTextColor(R.id.widget_header_title, theme.textPrimary);
         views.setTextColor(R.id.widget_empty_text, theme.textSecondary);
 
