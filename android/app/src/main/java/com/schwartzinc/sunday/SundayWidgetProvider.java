@@ -19,6 +19,11 @@ public class SundayWidgetProvider extends AppWidgetProvider {
 
     public static final String ACTION_SYNC_DISABLED = "com.schwartzinc.sunday.SYNC_DISABLED";
 
+    public static boolean isSyncing(SharedPreferences prefs) {
+        long syncingSince = prefs.getLong(WidgetBridgePlugin.KEY_SYNCING_SINCE, 0L);
+        return syncingSince > 0 && (System.currentTimeMillis() - syncingSince < 60_000L);
+    }
+
     public static void refreshAll(Context context) {
         AppWidgetManager manager = AppWidgetManager.getInstance(context);
         ComponentName widgetComponent = new ComponentName(context, SundayWidgetProvider.class);
@@ -62,8 +67,7 @@ public class SundayWidgetProvider extends AppWidgetProvider {
         }
         WidgetTheme theme = WidgetTheme.get(themeName);
 
-        long syncingSince = prefs.getLong(WidgetBridgePlugin.KEY_SYNCING_SINCE, 0L);
-        boolean isSyncing = syncingSince > 0 && (System.currentTimeMillis() - syncingSince < 60_000L);
+        boolean isSyncing = isSyncing(prefs);
 
         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget_root);
 

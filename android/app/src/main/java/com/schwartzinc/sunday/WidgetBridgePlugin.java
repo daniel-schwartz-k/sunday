@@ -19,6 +19,8 @@ public class WidgetBridgePlugin extends Plugin {
     @Override
     public void load() {
         super.load();
+        // Clear any stale syncing state on fresh process start
+        writeSyncing(getContext(), false);
         dispatchIntentIfPresent(getActivity().getIntent());
     }
 
@@ -28,17 +30,42 @@ public class WidgetBridgePlugin extends Plugin {
         dispatchIntentIfPresent(intent);
     }
 
+    private static void writeSyncing(Context context, boolean syncing) {
+        if (context == null) return;
+        SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        if (syncing) {
+            prefs.edit().putLong(KEY_SYNCING_SINCE, System.currentTimeMillis()).commit();
+        } else {
+            prefs.edit().remove(KEY_SYNCING_SINCE).commit();
+        }
+        SundayWidgetProvider.refreshAll(context);
+    }
+
     private void dispatchIntentIfPresent(Intent intent) {
         if (intent == null) return;
         String action = intent.getStringExtra("widgetAction");
         if (action == null || action.isEmpty()) return;
 
-        // When triggered by widget sync, send the activity to background immediately
-        // so the user does not have to watch the app open while syncing runs.
+        // When triggered by widget sync:
+        // 1. Immediately send activity to background.
+        // 2. If already syncing, drop the duplicate tap.
+        // 3. Otherwise immediately mark syncing=true so the widget shows the spinner
+        //    and disables clicks right away (even before JS finishes loading).
         if ("sync".equals(action)) {
             getActivity().runOnUiThread(() -> {
                 getActivity().moveTaskToBack(true);
             });
+
+            SharedPreferences prefs = getContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+            if (SundayWidgetProvider.isSyncing(prefs)) {
+                // Drop duplicate sync request
+                intent.removeExtra("widgetAction");
+                intent.removeExtra("taskId");
+                intent.removeExtra("columnId");
+                return;
+            }
+
+            writeSyncing(getContext(), true);
         }
 
         JSObject data = new JSObject();
@@ -74,14 +101,7 @@ public class WidgetBridgePlugin extends Plugin {
     @PluginMethod
     public void setSyncing(PluginCall call) {
         boolean syncing = Boolean.TRUE.equals(call.getBoolean("syncing"));
-        Context ctx = getContext();
-        SharedPreferences prefs = ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-        if (syncing) {
-            prefs.edit().putLong(KEY_SYNCING_SINCE, System.currentTimeMillis()).commit();
-        } else {
-            prefs.edit().remove(KEY_SYNCING_SINCE).commit();
-        }
-        SundayWidgetProvider.refreshAll(ctx);
+        writeSyncing(getContext(), syncing);
         call.resolve();
     }
 
