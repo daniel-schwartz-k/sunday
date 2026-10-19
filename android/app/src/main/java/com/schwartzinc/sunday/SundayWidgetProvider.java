@@ -18,6 +18,7 @@ import org.json.JSONObject;
 public class SundayWidgetProvider extends AppWidgetProvider {
 
     public static final String ACTION_SYNC_DISABLED = "com.schwartzinc.sunday.SYNC_DISABLED";
+    public static final String ACTION_SYNC_TIMEOUT = "com.schwartzinc.sunday.SYNC_TIMEOUT";
 
     public static boolean isSyncing(SharedPreferences prefs) {
         long syncingSince = prefs.getLong(WidgetBridgePlugin.KEY_SYNCING_SINCE, 0L);
@@ -38,9 +39,20 @@ public class SundayWidgetProvider extends AppWidgetProvider {
 
     @Override
     public void onReceive(Context context, Intent intent) {
-        if (intent != null && ACTION_SYNC_DISABLED.equals(intent.getAction())) {
-            Toast.makeText(context, "Sync is only available in AirTable mode", Toast.LENGTH_SHORT).show();
-            return;
+        if (intent != null) {
+            String action = intent.getAction();
+            if (ACTION_SYNC_DISABLED.equals(action)) {
+                Toast.makeText(context, "Sync is only available in AirTable mode", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            if (ACTION_SYNC_TIMEOUT.equals(action)) {
+                SharedPreferences prefs = context.getSharedPreferences(WidgetBridgePlugin.PREFS_NAME, Context.MODE_PRIVATE);
+                if (!isSyncing(prefs)) {
+                    prefs.edit().remove(WidgetBridgePlugin.KEY_SYNCING_SINCE).commit();
+                    refreshAll(context);
+                }
+                return;
+            }
         }
         super.onReceive(context, intent);
     }
@@ -77,6 +89,29 @@ public class SundayWidgetProvider extends AppWidgetProvider {
         views.setTextColor(R.id.widget_header_title, theme.textPrimary);
         views.setTextColor(R.id.widget_empty_text, theme.textSecondary);
 
+        // Prepare pending intent for sync button / spinner area
+        PendingIntent syncPending;
+        if (syncEnabled) {
+            Intent syncIntent = new Intent(context, MainActivity.class);
+            syncIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_NO_ANIMATION);
+            syncIntent.putExtra("widgetAction", "sync");
+            syncPending = PendingIntent.getActivity(
+                context,
+                1,
+                syncIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+            );
+        } else {
+            Intent disabledIntent = new Intent(context, SundayWidgetProvider.class);
+            disabledIntent.setAction(ACTION_SYNC_DISABLED);
+            syncPending = PendingIntent.getBroadcast(
+                context,
+                2,
+                disabledIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+            );
+        }
+
         // Configure sync button / spinner
         if (isSyncing) {
             views.setViewVisibility(R.id.widget_sync_btn, View.GONE);
@@ -88,39 +123,20 @@ public class SundayWidgetProvider extends AppWidgetProvider {
                     ColorStateList.valueOf(theme.accent)
                 );
             }
-            // Clear click handler during sync so repeated taps are ignored
-            views.setOnClickPendingIntent(R.id.widget_sync_area, null);
+            // Keep click handler active even while showing spinner: brings the app to front,
+            // or starts a fresh sync if the 60s timeout elapsed without a redraw.
+            views.setOnClickPendingIntent(R.id.widget_sync_area, syncPending);
         } else {
             views.setViewVisibility(R.id.widget_sync_progress, View.GONE);
             views.setViewVisibility(R.id.widget_sync_btn, View.VISIBLE);
 
             if (syncEnabled) {
                 views.setTextColor(R.id.widget_sync_btn, theme.accent);
-
-                Intent syncIntent = new Intent(context, MainActivity.class);
-                syncIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_NO_ANIMATION);
-                syncIntent.putExtra("widgetAction", "sync");
-                PendingIntent syncPending = PendingIntent.getActivity(
-                    context,
-                    1,
-                    syncIntent,
-                    PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
-                );
-                views.setOnClickPendingIntent(R.id.widget_sync_area, syncPending);
             } else {
                 int disabledColor = (theme.textSecondary & 0x00FFFFFF) | 0x66000000;
                 views.setTextColor(R.id.widget_sync_btn, disabledColor);
-
-                Intent disabledIntent = new Intent(context, SundayWidgetProvider.class);
-                disabledIntent.setAction(ACTION_SYNC_DISABLED);
-                PendingIntent disabledPending = PendingIntent.getBroadcast(
-                    context,
-                    2,
-                    disabledIntent,
-                    PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
-                );
-                views.setOnClickPendingIntent(R.id.widget_sync_area, disabledPending);
             }
+            views.setOnClickPendingIntent(R.id.widget_sync_area, syncPending);
         }
 
         // Header click: open the main app

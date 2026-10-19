@@ -1,8 +1,11 @@
 package com.schwartzinc.sunday;
 
+import android.app.AlarmManager;
+import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.os.SystemClock;
 import android.widget.Toast;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
@@ -30,13 +33,39 @@ public class WidgetBridgePlugin extends Plugin {
         dispatchIntentIfPresent(intent);
     }
 
+    private static PendingIntent getTimeoutPendingIntent(Context context) {
+        Intent intent = new Intent(context, SundayWidgetProvider.class);
+        intent.setAction(SundayWidgetProvider.ACTION_SYNC_TIMEOUT);
+        return PendingIntent.getBroadcast(
+            context,
+            3,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+        );
+    }
+
     private static void writeSyncing(Context context, boolean syncing) {
         if (context == null) return;
         SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+        PendingIntent timeoutPending = getTimeoutPendingIntent(context);
+
         if (syncing) {
             prefs.edit().putLong(KEY_SYNCING_SINCE, System.currentTimeMillis()).commit();
+            if (alarmManager != null) {
+                // Safety net: in case the app process/WebView dies or freezes before clearing
+                // the syncing state, reset the widget to idle after ~61s.
+                alarmManager.set(
+                    AlarmManager.ELAPSED_REALTIME,
+                    SystemClock.elapsedRealtime() + 61_000L,
+                    timeoutPending
+                );
+            }
         } else {
             prefs.edit().remove(KEY_SYNCING_SINCE).commit();
+            if (alarmManager != null) {
+                alarmManager.cancel(timeoutPending);
+            }
         }
         SundayWidgetProvider.refreshAll(context);
     }
@@ -47,15 +76,11 @@ public class WidgetBridgePlugin extends Plugin {
         if (action == null || action.isEmpty()) return;
 
         // When triggered by widget sync:
-        // 1. Immediately send activity to background.
-        // 2. If already syncing, drop the duplicate tap.
-        // 3. Otherwise immediately mark syncing=true so the widget shows the spinner
-        //    and disables clicks right away (even before JS finishes loading).
+        // 1. Keep the activity in foreground so Android doesn't freeze the WebView/network.
+        //    JS calls closeApp() when sync completes (or fails).
+        // 2. If already syncing, drop duplicate dispatch (the tap just brings the app to front).
+        // 3. Otherwise immediately mark syncing=true so the widget shows the spinner right away.
         if ("sync".equals(action)) {
-            getActivity().runOnUiThread(() -> {
-                getActivity().moveTaskToBack(true);
-            });
-
             SharedPreferences prefs = getContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
             if (SundayWidgetProvider.isSyncing(prefs)) {
                 // Drop duplicate sync request
