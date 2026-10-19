@@ -1,5 +1,5 @@
 // service-worker.js
-const CACHE_NAME = 'sunday-app-cache-v20';
+const CACHE_NAME = 'sunday-app-cache-v21';
 const ASSETS_TO_CACHE = [
   '/sunday/',
   '/sunday/index.html',

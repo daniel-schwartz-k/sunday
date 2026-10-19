@@ -4,6 +4,7 @@ import android.graphics.Color;
 
 public final class WidgetTheme {
     public final int bg;
+    public final int bgRes;
     public final int cardBg;
     public final int textPrimary;
     public final int textSecondary;
@@ -11,8 +12,9 @@ public final class WidgetTheme {
     public final int accent;
     public final int action;
 
-    private WidgetTheme(int bg, int cardBg, int textPrimary, int textSecondary, int border, int accent, int action) {
+    private WidgetTheme(int bg, int bgRes, int cardBg, int textPrimary, int textSecondary, int border, int accent, int action) {
         this.bg = bg;
+        this.bgRes = bgRes;
         this.cardBg = cardBg;
         this.textPrimary = textPrimary;
         this.textSecondary = textSecondary;
@@ -27,6 +29,7 @@ public final class WidgetTheme {
             case "light":
                 return new WidgetTheme(
                     Color.parseColor("#f8f9fb"),
+                    R.drawable.widget_bg_light,
                     Color.parseColor("#ffffff"),
                     Color.parseColor("#2c3e50"),
                     Color.parseColor("#64748b"),
@@ -37,6 +40,7 @@ public final class WidgetTheme {
             case "slate":
                 return new WidgetTheme(
                     Color.parseColor("#1e2126"),
+                    R.drawable.widget_bg_slate,
                     Color.parseColor("#282c34"),
                     Color.parseColor("#c9d1d9"),
                     Color.parseColor("#8b949e"),
@@ -47,6 +51,7 @@ public final class WidgetTheme {
             case "paper":
                 return new WidgetTheme(
                     Color.parseColor("#f7f5f2"),
+                    R.drawable.widget_bg_paper,
                     Color.parseColor("#ffffff"),
                     Color.parseColor("#3a3733"),
                     Color.parseColor("#726c63"),
@@ -58,6 +63,7 @@ public final class WidgetTheme {
             default:
                 return new WidgetTheme(
                     Color.parseColor("#1a1a1a"),
+                    R.drawable.widget_bg_dark,
                     Color.parseColor("#2d2d2d"),
                     Color.parseColor("#e0e0e0"),
                     Color.parseColor("#888888"),

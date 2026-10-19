@@ -73,13 +73,12 @@
             </FrameLayout>
         </LinearLayout>
 
-        <!-- Divider line (ImageView with static shape drawable, 100% RemoteViews safe) -->
+        <!-- Divider line -->
         <ImageView
             android:id="@+id/widget_header_divider"
             android:layout_width="match_parent"
             android:layout_height="1dp"
-            android:src="@drawable/widget_divider"
-            android:scaleType="fitXY"
+            android:background="#3d3d3d"
             android:layout_marginBottom="4dp"
             android:contentDescription="@null" />
 
@@ -91,7 +90,9 @@
             android:layout_weight="1"
             android:divider="@null"
             android:dividerHeight="0dp"
-            android:scrollbars="vertical" />
+            android:scrollbars="vertical"
+            android:background="@android:color/transparent"
+            android:cacheColorHint="#00000000" />
 
         <!-- Empty view when no snapshot / no tasks -->
         <TextView
