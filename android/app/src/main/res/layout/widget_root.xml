@@ -3,22 +3,14 @@
     android:id="@+id/widget_container"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:padding="8dp">
-
-    <!-- Tinted rounded background -->
-    <ImageView
-        android:id="@+id/widget_bg_image"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:src="@drawable/widget_bg"
-        android:scaleType="fitXY"
-        android:contentDescription="@null" />
+    android:background="@drawable/widget_bg_dark"
+    android:forceDarkAllowed="false"
+    android:padding="16dp">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:orientation="vertical"
-        android:padding="8dp">
+        android:orientation="vertical">
 
         <!-- Header: app logo + name + open app tap target -->
         <LinearLayout

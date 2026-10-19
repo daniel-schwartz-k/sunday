@@ -1,5 +1,5 @@
 // Dev version stamp — updated on every code change (format: YYYY-MM-DD HH:MM)
-const APP_VERSION = '2026-10-19 06:52 UTC';
+const APP_VERSION = '2026-10-19 14:38 UTC';
 
 // GitHub repository for in-app APK update checks (owner/repo)
 const GITHUB_REPO = 'daniel-schwartz-k/sunday';
