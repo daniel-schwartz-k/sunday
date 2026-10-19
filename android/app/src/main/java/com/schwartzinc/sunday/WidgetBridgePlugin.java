@@ -77,9 +77,9 @@ public class WidgetBridgePlugin extends Plugin {
         Context ctx = getContext();
         SharedPreferences prefs = ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         if (syncing) {
-            prefs.edit().putLong(KEY_SYNCING_SINCE, System.currentTimeMillis()).apply();
+            prefs.edit().putLong(KEY_SYNCING_SINCE, System.currentTimeMillis()).commit();
         } else {
-            prefs.edit().remove(KEY_SYNCING_SINCE).apply();
+            prefs.edit().remove(KEY_SYNCING_SINCE).commit();
         }
         SundayWidgetProvider.refreshAll(ctx);
         call.resolve();
