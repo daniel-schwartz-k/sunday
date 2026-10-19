@@ -46,7 +46,7 @@
                 android:textSize="17sp"
                 android:textStyle="bold" />
 
-            <!-- Sync button area: ⇅ idle, … syncing, ⟳ last sync failed -->
+            <!-- Sync button area -->
             <FrameLayout
                 android:id="@+id/widget_sync_area"
                 android:layout_width="34dp"

@@ -1,5 +1,5 @@
 // Dev version stamp — updated on every code change (format: YYYY-MM-DD HH:MM)
-const APP_VERSION = '2026-10-19 15:00 UTC';
+const APP_VERSION = '2026-10-19 20:54 UTC';
 
 // GitHub repository for in-app APK update checks (owner/repo)
 const GITHUB_REPO = 'daniel-schwartz-k/sunday';
@@ -1654,7 +1654,6 @@ class TaskManager {
             };
             this.showLoading('Syncing...');
             this.setWidgetSyncing(true);
-            let ok = false;
             try {
                 const airtableData = await this.loadFromAirtable();
                 const localRaw = localStorage.getItem('todo-app-data');
@@ -1733,7 +1732,6 @@ class TaskManager {
                 this.renderAllTasks();
                 this.syncWidget();
                 this.hideLoading();
-                ok = true;
                 return true;
             } catch (err) {
                 console.error('Failed to sync with Airtable:', err);
@@ -1741,7 +1739,7 @@ class TaskManager {
                 return false;
             } finally {
                 // Awaited so the native state is committed before closeApp() runs
-                await this.setWidgetSyncing(false, !ok);
+                await this.setWidgetSyncing(false);
             }
         }
 
@@ -2305,13 +2303,10 @@ class TaskManager {
             this.syncWidget();
         }
 
-        // error: true shows the retry glyph on the widget until the next sync starts; omit to leave it as is
-        async setWidgetSyncing(flag, error) {
+        async setWidgetSyncing(flag) {
             if (!isNativeApp() || !this.widgetBridge) return;
             try {
-                const payload = { syncing: !!flag };
-                if (error !== undefined) payload.error = !!error;
-                await this.widgetBridge.setSyncing(payload);
+                await this.widgetBridge.setSyncing({ syncing: !!flag });
             } catch (err) {
                 console.error('Failed to set widget syncing state:', err);
             }
