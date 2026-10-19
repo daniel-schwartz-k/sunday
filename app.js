@@ -1,5 +1,5 @@
 // Dev version stamp — updated on every code change (format: YYYY-MM-DD HH:MM)
-const APP_VERSION = '2026-10-19 09:35 UTC';
+const APP_VERSION = '2026-10-19 12:00 UTC';
 
 // GitHub repository for in-app APK update checks (owner/repo)
 const GITHUB_REPO = 'daniel-schwartz-k/sunday';
@@ -2352,8 +2352,8 @@ class TaskManager {
                 }
             } else if (action === 'sync') {
                 this.syncWithAirtable().then(ok => {
-                    if (ok && isNativeApp() && this.widgetBridge) {
-                        this.widgetBridge.closeApp().catch(() => {});
+                    if (isNativeApp() && this.widgetBridge) {
+                        this.widgetBridge.closeApp(ok ? {} : { message: 'Sync failed — check your connection and try again' }).catch(() => {});
                     }
                 });
             }

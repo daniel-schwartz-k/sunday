@@ -3,6 +3,7 @@ package com.schwartzinc.sunday;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.widget.Toast;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
@@ -31,6 +32,14 @@ public class WidgetBridgePlugin extends Plugin {
         if (intent == null) return;
         String action = intent.getStringExtra("widgetAction");
         if (action == null || action.isEmpty()) return;
+
+        // When triggered by widget sync, send the activity to background immediately
+        // so the user does not have to watch the app open while syncing runs.
+        if ("sync".equals(action)) {
+            getActivity().runOnUiThread(() -> {
+                getActivity().moveTaskToBack(true);
+            });
+        }
 
         JSObject data = new JSObject();
         data.put("widgetAction", action);
@@ -78,8 +87,12 @@ public class WidgetBridgePlugin extends Plugin {
 
     @PluginMethod
     public void closeApp(PluginCall call) {
+        String message = call.getString("message");
         call.resolve();
         getActivity().runOnUiThread(() -> {
+            if (message != null && !message.isEmpty()) {
+                Toast.makeText(getContext(), message, Toast.LENGTH_SHORT).show();
+            }
             getActivity().finishAndRemoveTask();
         });
     }

@@ -94,7 +94,7 @@ public class SundayWidgetProvider extends AppWidgetProvider {
                 views.setTextColor(R.id.widget_sync_btn, theme.accent);
 
                 Intent syncIntent = new Intent(context, MainActivity.class);
-                syncIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                syncIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_NO_ANIMATION);
                 syncIntent.putExtra("widgetAction", "sync");
                 PendingIntent syncPending = PendingIntent.getActivity(
                     context,
