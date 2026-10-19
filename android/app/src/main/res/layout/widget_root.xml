@@ -46,7 +46,7 @@
                 android:textSize="17sp"
                 android:textStyle="bold" />
 
-            <!-- Sync button / spinner area -->
+            <!-- Sync button area: ⇅ idle, … syncing, ⟳ last sync failed -->
             <FrameLayout
                 android:id="@+id/widget_sync_area"
                 android:layout_width="34dp"
@@ -61,15 +61,6 @@
                     android:textSize="21sp"
                     android:textStyle="bold"
                     android:contentDescription="Sync" />
-
-                <ProgressBar
-                    android:id="@+id/widget_sync_progress"
-                    style="?android:attr/progressBarStyleSmall"
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:layout_gravity="center"
-                    android:indeterminate="true"
-                    android:visibility="gone" />
             </FrameLayout>
         </LinearLayout>
 

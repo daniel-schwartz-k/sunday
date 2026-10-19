@@ -1,5 +1,5 @@
 // Dev version stamp — updated on every code change (format: YYYY-MM-DD HH:MM)
-const APP_VERSION = '2026-10-19 06:52 UTC';
+const APP_VERSION = '2026-10-19 15:00 UTC';
 
 // GitHub repository for in-app APK update checks (owner/repo)
 const GITHUB_REPO = 'daniel-schwartz-k/sunday';
@@ -1654,6 +1654,7 @@ class TaskManager {
             };
             this.showLoading('Syncing...');
             this.setWidgetSyncing(true);
+            let ok = false;
             try {
                 const airtableData = await this.loadFromAirtable();
                 const localRaw = localStorage.getItem('todo-app-data');
@@ -1732,13 +1733,15 @@ class TaskManager {
                 this.renderAllTasks();
                 this.syncWidget();
                 this.hideLoading();
+                ok = true;
                 return true;
             } catch (err) {
                 console.error('Failed to sync with Airtable:', err);
                 this.showError('Sync failed — check your connection and try again');
                 return false;
             } finally {
-                this.setWidgetSyncing(false);
+                // Awaited so the native state is committed before closeApp() runs
+                await this.setWidgetSyncing(false, !ok);
             }
         }
 
@@ -2302,12 +2305,13 @@ class TaskManager {
             this.syncWidget();
         }
 
-        setWidgetSyncing(flag) {
+        // error: true shows the retry glyph on the widget until the next sync starts; omit to leave it as is
+        async setWidgetSyncing(flag, error) {
             if (!isNativeApp() || !this.widgetBridge) return;
             try {
-                this.widgetBridge.setSyncing({ syncing: !!flag }).catch(err => {
-                    console.error('WidgetBridge.setSyncing rejected:', err);
-                });
+                const payload = { syncing: !!flag };
+                if (error !== undefined) payload.error = !!error;
+                await this.widgetBridge.setSyncing(payload);
             } catch (err) {
                 console.error('Failed to set widget syncing state:', err);
             }

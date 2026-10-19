@@ -6,6 +6,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.SystemClock;
+import android.util.Log;
 import android.widget.Toast;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
@@ -18,12 +19,14 @@ public class WidgetBridgePlugin extends Plugin {
     public static final String PREFS_NAME = "sunday_widget";
     public static final String KEY_SNAPSHOT = "snapshot";
     public static final String KEY_SYNCING_SINCE = "syncing_since";
+    public static final String KEY_SYNC_ERROR = "sync_error";
+    private static final String TAG = "SundayWidget";
 
     @Override
     public void load() {
         super.load();
-        // Clear any stale syncing state on fresh process start
-        writeSyncing(getContext(), false);
+        // Clear any stale syncing state on fresh process start (keeps a previous error flag)
+        writeSyncing(getContext(), false, null);
         dispatchIntentIfPresent(getActivity().getIntent());
     }
 
@@ -44,14 +47,19 @@ public class WidgetBridgePlugin extends Plugin {
         );
     }
 
-    private static void writeSyncing(Context context, boolean syncing) {
+    // error: null leaves the error flag untouched when syncing stops; starting a sync always clears it.
+    private static void writeSyncing(Context context, boolean syncing, Boolean error) {
         if (context == null) return;
         SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
         PendingIntent timeoutPending = getTimeoutPendingIntent(context);
+        Log.d(TAG, "writeSyncing syncing=" + syncing + " error=" + error);
 
         if (syncing) {
-            prefs.edit().putLong(KEY_SYNCING_SINCE, System.currentTimeMillis()).commit();
+            prefs.edit()
+                .putLong(KEY_SYNCING_SINCE, System.currentTimeMillis())
+                .remove(KEY_SYNC_ERROR)
+                .commit();
             if (alarmManager != null) {
                 // Safety net: in case the app process/WebView dies or freezes before clearing
                 // the syncing state, reset the widget to idle after ~61s.
@@ -62,7 +70,15 @@ public class WidgetBridgePlugin extends Plugin {
                 );
             }
         } else {
-            prefs.edit().remove(KEY_SYNCING_SINCE).commit();
+            SharedPreferences.Editor editor = prefs.edit().remove(KEY_SYNCING_SINCE);
+            if (error != null) {
+                if (error) {
+                    editor.putBoolean(KEY_SYNC_ERROR, true);
+                } else {
+                    editor.remove(KEY_SYNC_ERROR);
+                }
+            }
+            editor.commit();
             if (alarmManager != null) {
                 alarmManager.cancel(timeoutPending);
             }
@@ -90,7 +106,7 @@ public class WidgetBridgePlugin extends Plugin {
                 return;
             }
 
-            writeSyncing(getContext(), true);
+            writeSyncing(getContext(), true, null);
         }
 
         JSObject data = new JSObject();
@@ -126,7 +142,7 @@ public class WidgetBridgePlugin extends Plugin {
     @PluginMethod
     public void setSyncing(PluginCall call) {
         boolean syncing = Boolean.TRUE.equals(call.getBoolean("syncing"));
-        writeSyncing(getContext(), syncing);
+        writeSyncing(getContext(), syncing, call.getBoolean("error"));
         call.resolve();
     }
 

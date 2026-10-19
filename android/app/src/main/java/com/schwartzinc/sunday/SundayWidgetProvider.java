@@ -7,10 +7,8 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.content.res.ColorStateList;
 import android.net.Uri;
-import android.os.Build;
-import android.view.View;
+import android.util.Log;
 import android.widget.RemoteViews;
 import android.widget.Toast;
 import org.json.JSONObject;
@@ -48,7 +46,11 @@ public class SundayWidgetProvider extends AppWidgetProvider {
             if (ACTION_SYNC_TIMEOUT.equals(action)) {
                 SharedPreferences prefs = context.getSharedPreferences(WidgetBridgePlugin.PREFS_NAME, Context.MODE_PRIVATE);
                 if (!isSyncing(prefs)) {
-                    prefs.edit().remove(WidgetBridgePlugin.KEY_SYNCING_SINCE).commit();
+                    // A sync that never reported back counts as failed
+                    boolean wasSyncing = prefs.getLong(WidgetBridgePlugin.KEY_SYNCING_SINCE, 0L) > 0;
+                    SharedPreferences.Editor editor = prefs.edit().remove(WidgetBridgePlugin.KEY_SYNCING_SINCE);
+                    if (wasSyncing) editor.putBoolean(WidgetBridgePlugin.KEY_SYNC_ERROR, true);
+                    editor.commit();
                     refreshAll(context);
                 }
                 return;
@@ -80,6 +82,8 @@ public class SundayWidgetProvider extends AppWidgetProvider {
         WidgetTheme theme = WidgetTheme.get(themeName);
 
         boolean isSyncing = isSyncing(prefs);
+        boolean syncError = prefs.getBoolean(WidgetBridgePlugin.KEY_SYNC_ERROR, false);
+        Log.d("SundayWidget", "render isSyncing=" + isSyncing + " syncError=" + syncError);
 
         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget_root);
 
@@ -112,32 +116,31 @@ public class SundayWidgetProvider extends AppWidgetProvider {
             );
         }
 
-        // Configure sync button / spinner
+        // Configure sync button: ⇅ idle, … syncing, ⟳ last sync failed
+        String glyph;
+        String description;
         if (isSyncing) {
-            views.setViewVisibility(R.id.widget_sync_btn, View.GONE);
-            views.setViewVisibility(R.id.widget_sync_progress, View.VISIBLE);
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                views.setColorStateList(
-                    R.id.widget_sync_progress,
-                    "setIndeterminateTintList",
-                    ColorStateList.valueOf(theme.accent)
-                );
-            }
-            // Keep click handler active even while showing spinner: brings the app to front,
-            // or starts a fresh sync if the 60s timeout elapsed without a redraw.
-            views.setOnClickPendingIntent(R.id.widget_sync_area, syncPending);
+            glyph = "…";
+            description = "Syncing";
+        } else if (syncError && syncEnabled) {
+            glyph = "⟳";
+            description = "Retry sync";
         } else {
-            views.setViewVisibility(R.id.widget_sync_progress, View.GONE);
-            views.setViewVisibility(R.id.widget_sync_btn, View.VISIBLE);
-
-            if (syncEnabled) {
-                views.setTextColor(R.id.widget_sync_btn, theme.accent);
-            } else {
-                int disabledColor = (theme.textSecondary & 0x00FFFFFF) | 0x66000000;
-                views.setTextColor(R.id.widget_sync_btn, disabledColor);
-            }
-            views.setOnClickPendingIntent(R.id.widget_sync_area, syncPending);
+            glyph = "⇅";
+            description = "Sync";
         }
+        views.setTextViewText(R.id.widget_sync_btn, glyph);
+        views.setContentDescription(R.id.widget_sync_btn, description);
+
+        if (syncEnabled) {
+            views.setTextColor(R.id.widget_sync_btn, theme.accent);
+        } else {
+            int disabledColor = (theme.textSecondary & 0x00FFFFFF) | 0x66000000;
+            views.setTextColor(R.id.widget_sync_btn, disabledColor);
+        }
+        // Keep click handler active in every state: while syncing it brings the app to front,
+        // or starts a fresh sync if the 60s timeout elapsed without a redraw.
+        views.setOnClickPendingIntent(R.id.widget_sync_area, syncPending);
 
         // Header click: open the main app
         Intent openAppIntent = new Intent(context, MainActivity.class);
